@@ -1,0 +1,36 @@
+name: Update Git Garden
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # 매일 9AM (한국 기준은 시간 조정 필요)
+  workflow_dispatch: # 수동 실행도 가능하게
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies (없으면 스킵 가능)
+        run: npm install
+
+      - name: Update Garden
+        run: node update-garden.js
+
+      - name: Commit and Push changes
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git commit -m "🌿 정원 자동 업데이트" || echo "No changes to commit"
+          git push
