@@ -393,3 +393,8 @@ const contributions = [
 
 // Remove this line in actual output, it's for showing the concept.
 console.log(`Filtered to ${contributions.length} days.`);
+
+const totalContributions = contributions.reduce((sum, c) => sum + c.count, 0);
+
+// For debugging or display in index.html later
+console.log(`Total contributions: ${totalContributions}`);
