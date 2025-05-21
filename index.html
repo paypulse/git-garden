@@ -83,32 +83,32 @@
         let intersectedCube = null;
         let tooltipElement;
 
+        // --- Texture Loading ---
+        const textureLoader = new THREE.TextureLoader();
+        let floorTexture = textureLoader.load('object/floor.png');
+        floorTexture.wrapS = THREE.RepeatWrapping;
+        floorTexture.wrapT = THREE.RepeatWrapping;
+        // floorTexture.repeat.set(10, 10); // Example: will be set in material application
+
+        let count1Texture = textureLoader.load('object/count1.png');
+        let count2Texture = textureLoader.load('object/count2.png');
+        let count3Texture = textureLoader.load('object/count3.png');
+        let count4Texture = textureLoader.load('object/count4.png');
+        let count5Texture = textureLoader.load('object/count5.png');
+
         // --- Helper Functions ---
-        // Moved createBlock here to make it globally accessible
-        function createBlock(color, x, y, z) {
+        function createCustomBlock(material, x, y, z) { // x, z typically 0 for blocks in a stack
             const geometry = new THREE.BoxGeometry(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
-            const material = new THREE.MeshStandardMaterial({ color: color, roughness: 0.65, metalness: 0.15 });
+            // material is passed in directly
             const block = new THREE.Mesh(geometry, material);
-            block.position.set(x * CUBE_SIZE, y * CUBE_SIZE + CUBE_SIZE / 2, z * CUBE_SIZE); // Center origin of block at its base
+            // Position the block such that its base is at y * CUBE_SIZE relative to its parent group.
+            block.position.set(x * CUBE_SIZE, y * CUBE_SIZE + CUBE_SIZE / 2, z * CUBE_SIZE);
             block.castShadow = true;
             block.receiveShadow = true;
             return block;
         }
 
-        function mapCountToColor(count) {
-            if (count === 0) return 0x383838; // Darker grey for no contributions
-            if (count >= 1 && count <= 2) return 0x0e4429;
-            if (count >= 3 && count <= 5) return 0x006d32;
-            if (count >= 6 && count <= 9) return 0x26a641;
-            return 0x39d353; // GitHub's brightest green
-        }
-        
-        function mapCountToHeight(count) {
-            if (count === 0) return 0.1; // Minimal height for zero contributions
-            // Logarithmic scale, slightly adjusted for more visual impact
-            const height = 0.3 + Math.log1p(count) * 1.2; 
-            return Math.min(height, 20); // Increased max height cap
-        }
+        // mapCountToColor and mapCountToHeight are no longer used.
 
         // --- Initialization ---
         function init() {
@@ -188,43 +188,24 @@
             // const shadowHelper = new THREE.CameraHelper(directionalLight.shadow.camera);
             // scene.add(shadowHelper);
             
-            // Ground plane - REMOVED OLD PLANE
-            // const planeGeometry = new THREE.PlaneGeometry(GRID_WIDTH * 2.5, GRID_DEPTH * 4); 
-            // const planeMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22, roughness: 0.9, metalness: 0.1 }); 
-            // const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-            // plane.rotation.x = -Math.PI / 2;
-            // plane.position.y = -CUBE_SIZE / 2 -0.01; 
-            // plane.receiveShadow = true;
-            // scene.add(plane);
+            // --- Textured Ground Plane ---
+            const planeWidth = GRID_WIDTH * 2.5;
+            const planeDepth = GRID_DEPTH * 4.0;
+            const groundGeometry = new THREE.PlaneGeometry(planeWidth, planeDepth);
 
-            // --- Blocky Road Surface --- REMOVED
-
-            // --- Black Ground Plane --- REMOVED
-            // const blackGroundMaterial = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.8, metalness: 0.2 });
-            // const groundPlaneGeometry = new THREE.PlaneGeometry(GRID_WIDTH * 3, GRID_DEPTH * 5); 
-            // const groundPlane = new THREE.Mesh(groundPlaneGeometry, blackGroundMaterial);
-            // groundPlane.rotation.x = -Math.PI / 2; 
-            // groundPlane.position.y = -0.01;      
-            // groundPlane.receiveShadow = true;
-            // scene.add(groundPlane);
-
-            // --- Blocky Soil Ground ---
-            const soilBlockColor = mc_colors.soil_brown;
-            const soilGroundGroup = new THREE.Group();
-            const groundWidthBlocks = Math.floor((GRID_WIDTH * 2.5) / CUBE_SIZE);
-            const groundDepthBlocks = Math.floor((GRID_DEPTH * 4.0) / CUBE_SIZE);
-            const soilBlockYPosition = -1; // Top surface of these blocks will be at Y=0.
-
-            for (let i = -Math.floor(groundWidthBlocks / 2); i <= Math.floor(groundWidthBlocks / 2); i++) {
-                for (let j = -Math.floor(groundDepthBlocks / 2); j <= Math.floor(groundDepthBlocks / 2); j++) {
-                    const block = createBlock(soilBlockColor, i, soilBlockYPosition, j);
-                    block.castShadow = false; 
-                    block.receiveShadow = true;
-                    soilGroundGroup.add(block);
-                }
-            }
-            scene.add(soilGroundGroup);
-
+            floorTexture.repeat.set(20, 20); // Adjust these values as necessary
+            
+            const groundMaterial = new THREE.MeshStandardMaterial({
+                map: floorTexture,
+                roughness: 0.8, 
+                metalness: 0.2  
+            });
+            
+            const groundPlane = new THREE.Mesh(groundGeometry, groundMaterial);
+            groundPlane.rotation.x = -Math.PI / 2;
+            groundPlane.position.y = 0; // Top surface of the plane will be at y=0
+            groundPlane.receiveShadow = true;
+            scene.add(groundPlane);
 
             // Renderer setup
             renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -277,7 +258,8 @@
             const startDateOfGrid = new Date(firstDate);
             startDateOfGrid.setDate(firstDate.getDate() - firstDate.getDay()); // Set to Sunday of the first week
 
-            // Helper function createBlock was moved to global scope before init()
+            
+            const stackBlockMaterial = new THREE.MeshStandardMaterial({ map: floorTexture, roughness: 0.7, metalness: 0.3 });
 
             sortedContributions.forEach(contrib => {
                 const date = contrib.dateObj;
@@ -293,30 +275,61 @@
                 const x_position = weekIndex * (CUBE_SIZE + CUBE_SPACING);
                 const z_position = dayOfWeek * (CUBE_SIZE + CUBE_SPACING);
                 
-                // --- Start of Stacked Wooden Plank Logic ---
-                if (contrib.count === 0) {
-                    // Do nothing for count === 0
-                    return; 
-                }
-
                 let modelGroup = new THREE.Group();
-                modelGroup.position.set(x_position, 0, z_position); // Base of the stack at Y=0 of the scene
+                modelGroup.position.set(x_position, 0, z_position);
 
-                for (let y_layer = 0; y_layer < contrib.count; y_layer++) {
-                    // createBlock(color, local_x_idx, local_y_idx, local_z_idx)
-                    // local_y_idx is the layer index. createBlock positions bottom face at local_y_idx * CUBE_SIZE.
-                    const block = createBlock(mc_colors.wood_plank, 0, y_layer, 0);
-                    modelGroup.add(block);
+                if (contrib.count === 0) {
+                    // Create a single flat block (cube for now)
+                    const floorBlock = createCustomBlock(stackBlockMaterial, 0, 0, 0); // y_layer = 0
+                    // To make it visually flatter, we can scale it down, but this makes raycasting tricky.
+                    // For now, full cube at y=0. Its top is at CUBE_SIZE/2.
+                    // Let's adjust its position so its top surface is at y=0 or slightly below.
+                    // block.position.set(0, -CUBE_SIZE / 2 + 0.05, 0); // Top surface at 0.05
+                    // For simplicity, let's keep it as a regular block at layer 0 for now.
+                    // Its base is at y=0.
+                    modelGroup.add(floorBlock);
+                    modelGroup.userData = {
+                        date: contrib.dateObj.toISOString().split('T')[0],
+                        count: contrib.count,
+                        type: 'floor_tile',
+                        isContributionObject: true,
+                        highlightableMeshes: [floorBlock],
+                        originalMaterials: [floorBlock.material] // Store actual material instance
+                    };
+                } else {
+                    let topTexture;
+                    if (contrib.count === 1) {
+                        topTexture = count1Texture;
+                    } else if (contrib.count >= 2 && contrib.count < 4) {
+                        topTexture = count2Texture;
+                    } else if (contrib.count >= 4 && contrib.count < 10) {
+                        topTexture = count3Texture;
+                    } else if (contrib.count >= 10 && contrib.count < 20) {
+                        topTexture = count4Texture;
+                    } else { // count >= 20
+                        topTexture = count5Texture;
+                    }
+                    const topBlockMaterial = new THREE.MeshStandardMaterial({ map: topTexture, roughness: 0.7, metalness: 0.3 });
+
+                    for (let y_layer = 0; y_layer < contrib.count; y_layer++) {
+                        let block;
+                        if (y_layer < contrib.count - 1) { // Not the top block
+                            block = createCustomBlock(stackBlockMaterial, 0, y_layer, 0);
+                        } else { // It's the top block
+                            block = createCustomBlock(topBlockMaterial, 0, y_layer, 0);
+                        }
+                        modelGroup.add(block);
+                    }
+                    
+                    modelGroup.userData = {
+                        date: contrib.dateObj.toISOString().split('T')[0],
+                        count: contrib.count,
+                        type: 'contribution_stack',
+                        isContributionObject: true,
+                        highlightableMeshes: modelGroup.children.slice(), // All blocks in this stack
+                        originalMaterials: modelGroup.children.map(mesh => mesh.material) // Store actual material instances
+                    };
                 }
-                
-                modelGroup.userData = {
-                    date: contrib.dateObj.toISOString().split('T')[0],
-                    count: contrib.count,
-                    type: 'wood_stack', // New type
-                    isContributionObject: true,
-                    originalColor: mc_colors.wood_plank.clone(), // Base color of the blocks
-                    highlightableMeshes: modelGroup.children.slice() // All blocks in this stack
-                };
                 contributionCubesGroup.add(modelGroup);
             });
             
@@ -360,38 +373,49 @@
                     if (intersectedCube !== contributionGroup) {
                         if (intersectedCube && intersectedCube.userData.highlightableMeshes) {
                             // Reset previous group's highlight
-                            if (intersectedCube.userData.type === 'lava_block') {
+                            if (intersectedCube.userData.type === 'lava_block') { // Keep lava block logic
                                 const lavaMeshes = intersectedCube.userData.highlightableMeshes;
                                 if (lavaMeshes && lavaMeshes.length > 0 && lavaMeshes[0].material) {
-                                    lavaMeshes[0].material.emissive.copy(intersectedCube.userData.originalEmissiveColor);
-                                    lavaMeshes[0].material.emissiveIntensity = intersectedCube.userData.originalEmissiveIntensity;
+                                     // Restore from values stored during highlight if they exist, otherwise from main userData
+                                    if (lavaMeshes[0].material.userData && lavaMeshes[0].material.userData.hasOwnProperty('originalEmissiveColorForHighlight')) {
+                                        lavaMeshes[0].material.emissive.copy(lavaMeshes[0].material.userData.originalEmissiveColorForHighlight);
+                                        lavaMeshes[0].material.emissiveIntensity = lavaMeshes[0].material.userData.originalEmissiveIntensityForHighlight;
+                                    } else if (intersectedCube.userData.originalEmissiveColor && intersectedCube.userData.hasOwnProperty('originalEmissiveIntensity')) { // Fallback if somehow not set during highlight
+                                        lavaMeshes[0].material.emissive.copy(intersectedCube.userData.originalEmissiveColor);
+                                        lavaMeshes[0].material.emissiveIntensity = intersectedCube.userData.originalEmissiveIntensity;
+                                    }
                                 }
-                            } else {
-                                intersectedCube.userData.highlightableMeshes.forEach(mesh => {
-                                    if (mesh.material) mesh.material.emissive.setHex(0x000000);
+                            } else { // For new textured blocks
+                                intersectedCube.userData.highlightableMeshes.forEach((mesh, index) => {
+                                    if (mesh.material) {
+                                        mesh.material.emissive.setHex(0x000000); // Remove emissive highlight
+                                        // Potentially restore original material if swapped: mesh.material = intersectedCube.userData.originalMaterials[index];
+                                    }
                                 });
                             }
                         }
                         intersectedCube = contributionGroup;
                         // Apply new highlight
-                        if (intersectedCube.userData.type === 'lava_block') {
+                        if (intersectedCube.userData.type === 'lava_block') { // Keep lava block logic
                             const lavaMeshes = intersectedCube.userData.highlightableMeshes;
                             if (lavaMeshes && lavaMeshes.length > 0 && lavaMeshes[0].material) {
-                                // Ensure originalEmissiveColor and originalEmissiveIntensity are stored if not already
                                 if (!lavaMeshes[0].material.userData) lavaMeshes[0].material.userData = {};
                                 if (!lavaMeshes[0].material.userData.hasOwnProperty('originalEmissiveColorForHighlight')) {
                                      lavaMeshes[0].material.userData.originalEmissiveColorForHighlight = lavaMeshes[0].material.emissive.clone();
                                      lavaMeshes[0].material.userData.originalEmissiveIntensityForHighlight = lavaMeshes[0].material.emissiveIntensity;
                                 }
+                                // lavaMeshes[0].material.emissive.setHex(HIGHLIGHT_COLOR); // Use a consistent highlight color if desired
                                 lavaMeshes[0].material.emissiveIntensity = intersectedCube.userData.originalEmissiveIntensity * 2.0; // Enhance glow
                             }
-                        } else if (intersectedCube.userData.highlightableMeshes) {
+                        } else if (intersectedCube.userData.highlightableMeshes) { // For new textured blocks
                             intersectedCube.userData.highlightableMeshes.forEach(mesh => {
-                                if (mesh.material) mesh.material.emissive.setHex(0x555555); // Moderate grey emissive
+                                if (mesh.material) {
+                                    mesh.material.emissive.setHex(0x555555); // Add emissive highlight
+                                }
                             });
                         }
                         tooltipElement.style.display = 'block';
-                        tooltipElement.innerHTML = `Date: ${intersectedCube.userData.date}<br>Contributions: ${intersectedCube.userData.count}<br>Type: ${intersectedCube.userData.type}`;
+                        tooltipElement.innerHTML = `Date: ${intersectedCube.userData.date}<br>Contributions: ${intersectedCube.userData.count}<br>Type: ${intersectedCube.userData.type || 'N/A'}`;
                     }
                     tooltipElement.style.left = (event.clientX + 10) + 'px';
                     tooltipElement.style.top = (event.clientY - 25) + 'px';
@@ -404,11 +428,10 @@
         }
         
         function hideTooltipAndResetObject() { 
-            if (intersectedCube) { // Check if intersectedCube is not null
-                if (intersectedCube.userData.type === 'lava_block') {
+            if (intersectedCube) {
+                if (intersectedCube.userData.type === 'lava_block') { // Keep lava block logic
                     const lavaMeshes = intersectedCube.userData.highlightableMeshes;
                     if (lavaMeshes && lavaMeshes.length > 0 && lavaMeshes[0].material) {
-                        // Restore from values stored during highlight if they exist, otherwise from main userData
                         if (lavaMeshes[0].material.userData && lavaMeshes[0].material.userData.hasOwnProperty('originalEmissiveColorForHighlight')) {
                             lavaMeshes[0].material.emissive.copy(lavaMeshes[0].material.userData.originalEmissiveColorForHighlight);
                             lavaMeshes[0].material.emissiveIntensity = lavaMeshes[0].material.userData.originalEmissiveIntensityForHighlight;
@@ -417,10 +440,12 @@
                              lavaMeshes[0].material.emissiveIntensity = intersectedCube.userData.originalEmissiveIntensity;
                         }
                     }
-                } else if (intersectedCube.userData.highlightableMeshes) {
-                    // For other types, reset emissive to black
-                    intersectedCube.userData.highlightableMeshes.forEach(mesh => {
-                         if (mesh.material) mesh.material.emissive.setHex(0x000000);
+                } else if (intersectedCube.userData.highlightableMeshes) { // For new textured blocks
+                    intersectedCube.userData.highlightableMeshes.forEach((mesh, index) => {
+                        if (mesh.material) {
+                            mesh.material.emissive.setHex(0x000000); // Remove emissive highlight
+                            // Potentially restore original material if swapped: mesh.material = intersectedCube.userData.originalMaterials[index];
+                        }
                     });
                 }
                 intersectedCube = null;
