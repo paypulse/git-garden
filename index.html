@@ -62,10 +62,16 @@
             mcd_yellow: new THREE.Color(0xFFFF00),
             mcd_door_grey: new THREE.Color(0x696969), // Dark Grey
             lotte_light_grey: new THREE.Color(0xD3D3D3),
-            lotte_medium_grey: new THREE.Color(0xA9A9A9), // Changed from 0x808080 for better distinction
+            lotte_medium_grey: new THREE.Color(0xA9A9A9), // Changed from 0x808080 for better distinction (also for stone)
             lotte_dark_blue_window: new THREE.Color(0x00008B),
             lotte_white: new THREE.Color(0xF0F0F0), // Slightly off-white for Lotte
-            road_grey: new THREE.Color(0xC0C0C0) // Silver, as a light grey for road
+            road_grey: new THREE.Color(0xC0C0C0), // Silver, as a light grey for road
+            // New Block Type Colors
+            grass_block_green: new THREE.Color(0x228B22),   // ForestGreen
+            sand_block_beige: new THREE.Color(0xF4A460),    // SandyBrown
+            // stone_block_grey is mc_colors.lotte_medium_grey (0xA9A9A9)
+            lava_block_orange: new THREE.Color(0xFF4500),   // OrangeRed
+            lava_block_emissive: new THREE.Color(0xFF8C00)  // DarkOrange (for emissive glow)
         };
 
 
@@ -84,8 +90,8 @@
             const material = new THREE.MeshStandardMaterial({ color: color, roughness: 0.65, metalness: 0.15 });
             const block = new THREE.Mesh(geometry, material);
             block.position.set(x * CUBE_SIZE, y * CUBE_SIZE + CUBE_SIZE / 2, z * CUBE_SIZE); // Center origin of block at its base
-           // block.castShadow = true;
-          //  block.receiveShadow = true;
+            block.castShadow = true;
+            block.receiveShadow = true;
             return block;
         }
 
@@ -193,6 +199,15 @@
 
             // --- Blocky Road Surface --- REMOVED
 
+            // --- Black Ground Plane ---
+            const blackGroundMaterial = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.8, metalness: 0.2 });
+            const groundPlaneGeometry = new THREE.PlaneGeometry(GRID_WIDTH * 3, GRID_DEPTH * 5); // Large enough to cover visible area
+            const groundPlane = new THREE.Mesh(groundPlaneGeometry, blackGroundMaterial);
+            groundPlane.rotation.x = -Math.PI / 2; // Make it horizontal
+            groundPlane.position.y = -0.01;      // Slightly below Y=0 so objects at Y=0 rest on it.
+                                                 // Models are at Y=0 (bottom surface), so this plane is just under them.
+            groundPlane.receiveShadow = true;
+            scene.add(groundPlane);
 
 
             // Renderer setup
@@ -262,160 +277,79 @@
                 const x_position = weekIndex * (CUBE_SIZE + CUBE_SPACING);
                 const z_position = dayOfWeek * (CUBE_SIZE + CUBE_SPACING);
                 
-                let modelGroup = new THREE.Group();
-                modelGroup.position.set(x_position, 0, z_position); // Base of models at y=0
-
-                let modelType = '';
-                let primaryColor = null; // For userData, if needed for highlighting
-
+                // --- Start of New Single Block Logic ---
                 if (count === 0) {
-                    modelType = 'bare_ground';
-                    primaryColor = mc_colors.brown_dark;
-                    // 3x3 grid of blocks (browns and dark green)
-                    for (let i = -1; i <= 1; i++) {
-                        for (let j = -1; j <= 1; j++) {
-                            let blockColor = mc_colors.brown_light;
-                            if (Math.random() < 0.3) blockColor = mc_colors.brown_dark;
-                            else if (Math.random() < 0.2) blockColor = mc_colors.green_dark; // Fewer green blocks
-                            modelGroup.add(createBlock(blockColor, i, 0, j));
-                        }
-                    }
-                } else if (count >= 1 && count <= 2) {
-                    modelType = 'starbucks';
-                    primaryColor = mc_colors.starbucks_green;
-                    // Approx 3x3 base, 3 blocks high.
-                    // Layer Y=0 (Base - can be slightly darker white or light grey for differentiation)
-                    for (let i = -1; i <= 1; i++) {
-                        for (let j = -1; j <= 1; j++) {
-                            modelGroup.add(createBlock(mc_colors.lotte_light_grey, i, 0, j));
-                        }
-                    }
-                    // Layer Y=1 (Walls)
-                    // Front: white, brown (door), white
-                    modelGroup.add(createBlock(mc_colors.white, -1, 1, -1));
-                    modelGroup.add(createBlock(mc_colors.starbucks_door_brown, 0, 1, -1)); 
-                    modelGroup.add(createBlock(mc_colors.white, 1, 1, -1));
-                    // Back: all white
-                    modelGroup.add(createBlock(mc_colors.white, -1, 1, 1));
-                    modelGroup.add(createBlock(mc_colors.white, 0, 1, 1));
-                    modelGroup.add(createBlock(mc_colors.white, 1, 1, 1));
-                    // Sides (with logo/window)
-                    modelGroup.add(createBlock(mc_colors.white, -1, 1, 0)); // Left wall
-                    modelGroup.add(createBlock(mc_colors.starbucks_green, 1, 1, 0)); // Right wall (logo placeholder)
-                    
-                    // Layer Y=2 (Upper Walls / Start of Roof elements)
-                     // Front: white, white (above door), white
-                    modelGroup.add(createBlock(mc_colors.white, -1, 2, -1));
-                    modelGroup.add(createBlock(mc_colors.white, 0, 2, -1)); 
-                    modelGroup.add(createBlock(mc_colors.white, 1, 2, -1));
-                    // Back: all white
-                    modelGroup.add(createBlock(mc_colors.white, -1, 2, 1));
-                    modelGroup.add(createBlock(mc_colors.white, 0, 2, 1));
-                    modelGroup.add(createBlock(mc_colors.white, 1, 2, 1));
-                    // Sides
-                    modelGroup.add(createBlock(mc_colors.window_blue, -1, 2, 0)); // Left wall (window)
-                    modelGroup.add(createBlock(mc_colors.white, 1, 2, 0));    // Right wall
-                    
-                    // Layer Y=3 (Roof)
-                    for (let i = -1; i <= 1; i++) {
-                        for (let j = -1; j <= 1; j++) {
-                            modelGroup.add(createBlock(mc_colors.starbucks_green, i, 3, j));
-                        }
-                    }
-                } else if (count >= 3 && count <= 4) {
-                    modelType = 'mcdonalds';
-                    primaryColor = mc_colors.mcd_red;
-                    // Approx 4x3 base, 3-4 blocks high.
-                    // Base Layer Y=0 (slightly darker red or grey)
-                    for (let i = -1.5; i <= 1.5; i++) { // 4 blocks wide ( -1.5, -0.5, 0.5, 1.5)
-                        for (let j = -0.5; j <= 0.5; j++) { // 2 blocks deep ( -0.5, 0.5 ) to make it 4x2 base
-                            modelGroup.add(createBlock(mc_colors.lotte_medium_grey, i, 0, j));
-                        }
-                    }
-                    // Walls Layer Y=1, Y=2 (Red)
-                    for (let y = 1; y <= 2; y++) {
-                        // Front and Back walls (4 blocks wide)
-                        for (let i = -1.5; i <= 1.5; i++) {
-                            modelGroup.add(createBlock(mc_colors.mcd_red, i, y, -0.5)); // Front
-                            modelGroup.add(createBlock(mc_colors.mcd_red, i, y, 0.5));  // Back
-                        }
-                        // Side walls (excluding corners already placed)
-                        modelGroup.add(createBlock(mc_colors.mcd_red, -1.5, y, 0)); 
-                        modelGroup.add(createBlock(mc_colors.mcd_red, 1.5, y, 0));
-                    }
-                    // Door (center front on Y=1)
-                    modelGroup.add(createBlock(mc_colors.mcd_door_grey, -0.5, 1, -0.5)); // Assuming door is 1 block wide
-                    modelGroup.add(createBlock(mc_colors.mcd_door_grey, 0.5, 1, -0.5));  // Wider door - 2 blocks
-                    modelGroup.add(createBlock(mc_colors.mcd_red, -0.5, 2, -0.5)); // Red block above door
-                    modelGroup.add(createBlock(mc_colors.mcd_red, 0.5, 2, -0.5));  // Red block above door
-
-                    // Roof Layer Y=3 (Yellow)
-                    for (let i = -1.5; i <= 1.5; i++) {
-                        for (let j = -0.5; j <= 0.5; j++) {
-                            modelGroup.add(createBlock(mc_colors.mcd_yellow, i, 3, j));
-                        }
-                    }
-                    // "M" Hint (Yellow on front roof edge, simple version)
-                    modelGroup.add(createBlock(mc_colors.mcd_yellow, -0.5, 2, -1.5)); // Lower part of M on front wall
-                    modelGroup.add(createBlock(mc_colors.mcd_yellow, 0.5, 2, -1.5));  // Lower part of M
-                    modelGroup.add(createBlock(mc_colors.mcd_yellow, 0, 3, -1.5));    // Top part of M on roof
-                
-                } else { // count >= 5
-                    modelType = 'lotte_tower';
-                    primaryColor = mc_colors.lotte_light_grey;
-                    const towerHeight = 12 + Math.min(Math.floor((count - 5) / 2), 4); // Base 12, +1 for every 2 extra counts, max 16
-
-                    // Base section (4x4 footprint, e.g., Y=0 to Y=2)
-                    for (let y = 0; y < 3; y++) {
-                        for (let i = -1.5; i <= 1.5; i++) {
-                            for (let j = -1.5; j <= 1.5; j++) {
-                                let color = ( (i+j) % 2 === 0) ? mc_colors.lotte_light_grey : mc_colors.lotte_medium_grey;
-                                modelGroup.add(createBlock(color, i, y, j));
-                            }
-                        }
-                    }
-                    // Mid-section 1 (3x3 footprint, e.g., Y=3 to Y=5)
-                    for (let y = 3; y < 6; y++) {
-                        for (let i = -0.5; i <= 0.5; i++) { // Centered 3 blocks
-                            for (let j = -0.5; j <= 0.5; j++) {
-                                let color = mc_colors.lotte_light_grey;
-                                if (Math.random() < 0.3) color = mc_colors.lotte_dark_blue_window;
-                                modelGroup.add(createBlock(color, i, y, j));
-                            }
-                        }
-                    }
-                    // Mid-section 2 (2x2 footprint, e.g., Y=6 to Y=8)
-                     for (let y = 6; y < 9; y++) {
-                        for (let i = -0.5; i <= 0.5; i+=1) { // Centered 2 blocks
-                             for (let j = -0.5; j <= 0.5; j+=1) {
-                                let color = mc_colors.lotte_white;
-                                if (Math.random() < 0.4) color = mc_colors.lotte_dark_blue_window;
-                                modelGroup.add(createBlock(color, i, y, j));
-                            }
-                        }
-                    }
-                     // Top section (2x2 narrowing to 1x1 or similar, Y=9 to towerHeight-1)
-                    for (let y = 9; y < towerHeight -1 ; y++) {
-                        let size = (y < towerHeight - 3) ? 0.5 : 0; // Make top part narrower (effectively 1x1 for last few layers)
-                        for (let i = -size; i <= size; i+=1) {
-                             for (let j = -size; j <= size; j+=1) {
-                                modelGroup.add(createBlock(mc_colors.lotte_white, i, y, j));
-                            }
-                        }
-                    }
-                    // Spire (Y=towerHeight-1)
-                    modelGroup.add(createBlock(mc_colors.lotte_light_grey, 0, towerHeight-1, 0));
+                    // For count === 0, do nothing: no modelGroup is created or added.
+                    return; 
                 }
 
-                modelGroup.userData = {
-                    date: date.toISOString().split('T')[0],
-                    count: count,
-                    type: modelType,
-                    isContributionObject: true, 
-                    originalColor: primaryColor ? primaryColor.clone() : null, // Store a base color for potential highlight
-                    // bloomMesh might refer to the modelGroup itself or a specific part if complex highlighting is needed
-                    highlightableMeshes: modelGroup.children.slice() // Store all children for group highlight
-                };
+                let modelGroup = new THREE.Group();
+                // Position the group so the base of the block (when added at local y=0) rests on Y=0 plane
+                modelGroup.position.set(x_position, 0, z_position); 
+
+                let modelType = '';
+                let blockColor = null;
+                let emissiveColor = null; // Only for lava
+
+                if (count === 1) {
+                    modelType = 'grass_block';
+                    blockColor = mc_colors.grass_block_green;
+                    const block = createBlock(blockColor, 0, 0, 0); // Create block at group's local origin (y=0 layer)
+                    modelGroup.add(block);
+                } else if (count === 2) {
+                    modelType = 'sand_block';
+                    blockColor = mc_colors.sand_block_beige;
+                    const block = createBlock(blockColor, 0, 0, 0);
+                    modelGroup.add(block);
+                } else if (count === 3) {
+                    modelType = 'stone_block';
+                    blockColor = mc_colors.lotte_medium_grey; // Using lotte_medium_grey as stone
+                    const block = createBlock(blockColor, 0, 0, 0);
+                    modelGroup.add(block);
+                } else if (count >= 4) {
+                    modelType = 'lava_block';
+                    blockColor = mc_colors.lava_block_orange;
+                    emissiveColor = mc_colors.lava_block_emissive;
+                    
+                    const lavaMaterial = new THREE.MeshStandardMaterial({ 
+                        color: blockColor, 
+                        emissive: emissiveColor,
+                        emissiveIntensity: 1.0, // Added emissiveIntensity
+                        roughness: 0.7, 
+                        metalness: 0.1 
+                    });
+                    const blockGeometry = new THREE.BoxGeometry(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
+                    const block = new THREE.Mesh(blockGeometry, lavaMaterial);
+                    // Position block's center at (0, CUBE_SIZE/2, 0) within the modelGroup
+                    // createBlock(color, 0,0,0) would achieve this for standard blocks.
+                    block.position.set(0, CUBE_SIZE / 2, 0); 
+                    block.castShadow = true; 
+                    block.receiveShadow = true;
+                    modelGroup.add(block);
+                }
+                
+                // Set userData only if a model was created (count > 0)
+                if (modelType === 'lava_block') {
+                    modelGroup.userData = {
+                        date: date.toISOString().split('T')[0],
+                        count: count,
+                        type: modelType,
+                        isContributionObject: true,
+                        originalColor: blockColor ? blockColor.clone() : null,
+                        originalEmissiveColor: emissiveColor.clone(), // Store original emissive for lava
+                        originalEmissiveIntensity: 1.0, // Assuming base intensity is 1.0
+                        highlightableMeshes: modelGroup.children.slice() 
+                    };
+                } else {
+                    modelGroup.userData = {
+                        date: date.toISOString().split('T')[0],
+                        count: count,
+                        type: modelType,
+                        isContributionObject: true,
+                        originalColor: blockColor ? blockColor.clone() : null,
+                        highlightableMeshes: modelGroup.children.slice() 
+                    };
+                }
                 contributionCubesGroup.add(modelGroup);
             });
             
@@ -458,14 +392,33 @@
                 if (contributionGroup) {
                     if (intersectedCube !== contributionGroup) {
                         if (intersectedCube && intersectedCube.userData.highlightableMeshes) {
-                            // Reset previous group's emissive
-                            intersectedCube.userData.highlightableMeshes.forEach(mesh => {
-                                if (mesh.material) mesh.material.emissive.setHex(0x000000);
-                            });
+                            // Reset previous group's highlight
+                            if (intersectedCube.userData.type === 'lava_block') {
+                                const lavaMeshes = intersectedCube.userData.highlightableMeshes;
+                                if (lavaMeshes && lavaMeshes.length > 0 && lavaMeshes[0].material) {
+                                    lavaMeshes[0].material.emissive.copy(intersectedCube.userData.originalEmissiveColor);
+                                    lavaMeshes[0].material.emissiveIntensity = intersectedCube.userData.originalEmissiveIntensity;
+                                }
+                            } else {
+                                intersectedCube.userData.highlightableMeshes.forEach(mesh => {
+                                    if (mesh.material) mesh.material.emissive.setHex(0x000000);
+                                });
+                            }
                         }
                         intersectedCube = contributionGroup;
-                        if (intersectedCube.userData.highlightableMeshes) {
-                            // Set emissive for current group
+                        // Apply new highlight
+                        if (intersectedCube.userData.type === 'lava_block') {
+                            const lavaMeshes = intersectedCube.userData.highlightableMeshes;
+                            if (lavaMeshes && lavaMeshes.length > 0 && lavaMeshes[0].material) {
+                                // Ensure originalEmissiveColor and originalEmissiveIntensity are stored if not already
+                                if (!lavaMeshes[0].material.userData) lavaMeshes[0].material.userData = {};
+                                if (!lavaMeshes[0].material.userData.hasOwnProperty('originalEmissiveColorForHighlight')) {
+                                     lavaMeshes[0].material.userData.originalEmissiveColorForHighlight = lavaMeshes[0].material.emissive.clone();
+                                     lavaMeshes[0].material.userData.originalEmissiveIntensityForHighlight = lavaMeshes[0].material.emissiveIntensity;
+                                }
+                                lavaMeshes[0].material.emissiveIntensity = intersectedCube.userData.originalEmissiveIntensity * 2.0; // Enhance glow
+                            }
+                        } else if (intersectedCube.userData.highlightableMeshes) {
                             intersectedCube.userData.highlightableMeshes.forEach(mesh => {
                                 if (mesh.material) mesh.material.emissive.setHex(0x555555); // Moderate grey emissive
                             });
@@ -484,10 +437,25 @@
         }
         
         function hideTooltipAndResetObject() { 
-            if (intersectedCube && intersectedCube.userData.highlightableMeshes) {
-                intersectedCube.userData.highlightableMeshes.forEach(mesh => {
-                     if (mesh.material) mesh.material.emissive.setHex(0x000000);
-                });
+            if (intersectedCube) { // Check if intersectedCube is not null
+                if (intersectedCube.userData.type === 'lava_block') {
+                    const lavaMeshes = intersectedCube.userData.highlightableMeshes;
+                    if (lavaMeshes && lavaMeshes.length > 0 && lavaMeshes[0].material) {
+                        // Restore from values stored during highlight if they exist, otherwise from main userData
+                        if (lavaMeshes[0].material.userData && lavaMeshes[0].material.userData.hasOwnProperty('originalEmissiveColorForHighlight')) {
+                            lavaMeshes[0].material.emissive.copy(lavaMeshes[0].material.userData.originalEmissiveColorForHighlight);
+                            lavaMeshes[0].material.emissiveIntensity = lavaMeshes[0].material.userData.originalEmissiveIntensityForHighlight;
+                        } else if (intersectedCube.userData.originalEmissiveColor && intersectedCube.userData.hasOwnProperty('originalEmissiveIntensity')) {
+                             lavaMeshes[0].material.emissive.copy(intersectedCube.userData.originalEmissiveColor);
+                             lavaMeshes[0].material.emissiveIntensity = intersectedCube.userData.originalEmissiveIntensity;
+                        }
+                    }
+                } else if (intersectedCube.userData.highlightableMeshes) {
+                    // For other types, reset emissive to black
+                    intersectedCube.userData.highlightableMeshes.forEach(mesh => {
+                         if (mesh.material) mesh.material.emissive.setHex(0x000000);
+                    });
+                }
                 intersectedCube = null;
             }
             tooltipElement.style.display = 'none';
