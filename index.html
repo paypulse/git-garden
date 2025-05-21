@@ -179,6 +179,7 @@
             directionalLight.shadow.bias = -0.0005;
             scene.add(directionalLight);
             // const shadowHelper = new THREE.CameraHelper(directionalLight.shadow.camera);
+            // const shadowHelper = new THREE.CameraHelper(directionalLight.shadow.camera);
             // scene.add(shadowHelper);
             
             // Ground plane - REMOVED OLD PLANE
@@ -190,26 +191,7 @@
             // plane.receiveShadow = true;
             // scene.add(plane);
 
-            // --- Blocky Road Surface ---
-            const roadGroup = new THREE.Group();
-            const roadBlockColor = mc_colors.road_grey; 
-            const roadWidthBlocks = Math.floor((GRID_WIDTH * 2.0) / CUBE_SIZE); // Adjusted multiplier for desired width
-            const roadDepthBlocks = Math.floor((GRID_DEPTH * 3.0) / CUBE_SIZE); // Adjusted multiplier for desired depth
-            const yPositionForRoadBlocks = -1; // One block level below the base of the contribution models.
-                                               // Top of these blocks will be at Y=0.
-
-            for (let i = -Math.floor(roadWidthBlocks / 2); i <= Math.floor(roadWidthBlocks / 2); i++) {
-                for (let j = -Math.floor(roadDepthBlocks / 2); j <= Math.floor(roadDepthBlocks / 2); j++) {
-                    // createBlock's y parameter is block layer index.
-                    // y=-1 means its center is at -0.5*CUBE_SIZE, so its top surface is at Y=0.
-                    const block = createBlock(roadBlockColor, i, yPositionForRoadBlocks, j);
-                    // Road blocks should not cast shadows themselves but should receive them.
-                    block.castShadow = false; 
-                    block.receiveShadow = true;
-                    roadGroup.add(block);
-                }
-            }
-            scene.add(roadGroup);
+            // --- Blocky Road Surface --- REMOVED
 
 
             // Renderer setup
