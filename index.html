@@ -274,62 +274,47 @@
 
                 const x_position = weekIndex * (CUBE_SIZE + CUBE_SPACING);
                 const z_position = dayOfWeek * (CUBE_SIZE + CUBE_SPACING);
+
+                if (contrib.count === 0) {
+                    return; // Skip this day, nothing will be drawn.
+                }
                 
+                // Logic for count > 0 (previously in 'else' block)
                 let modelGroup = new THREE.Group();
                 modelGroup.position.set(x_position, 0, z_position);
 
-                if (contrib.count === 0) {
-                    // Create a single flat block (cube for now)
-                    const floorBlock = createCustomBlock(stackBlockMaterial, 0, 0, 0); // y_layer = 0
-                    // To make it visually flatter, we can scale it down, but this makes raycasting tricky.
-                    // For now, full cube at y=0. Its top is at CUBE_SIZE/2.
-                    // Let's adjust its position so its top surface is at y=0 or slightly below.
-                    // block.position.set(0, -CUBE_SIZE / 2 + 0.05, 0); // Top surface at 0.05
-                    // For simplicity, let's keep it as a regular block at layer 0 for now.
-                    // Its base is at y=0.
-                    modelGroup.add(floorBlock);
-                    modelGroup.userData = {
-                        date: contrib.dateObj.toISOString().split('T')[0],
-                        count: contrib.count,
-                        type: 'floor_tile',
-                        isContributionObject: true,
-                        highlightableMeshes: [floorBlock],
-                        originalMaterials: [floorBlock.material] // Store actual material instance
-                    };
-                } else {
-                    let topTexture;
-                    if (contrib.count === 1) {
-                        topTexture = count1Texture;
-                    } else if (contrib.count >= 2 && contrib.count < 4) {
-                        topTexture = count2Texture;
-                    } else if (contrib.count >= 4 && contrib.count < 10) {
-                        topTexture = count3Texture;
-                    } else if (contrib.count >= 10 && contrib.count < 20) {
-                        topTexture = count4Texture;
-                    } else { // count >= 20
-                        topTexture = count5Texture;
-                    }
-                    const topBlockMaterial = new THREE.MeshStandardMaterial({ map: topTexture, roughness: 0.7, metalness: 0.3 });
-
-                    for (let y_layer = 0; y_layer < contrib.count; y_layer++) {
-                        let block;
-                        if (y_layer < contrib.count - 1) { // Not the top block
-                            block = createCustomBlock(stackBlockMaterial, 0, y_layer, 0);
-                        } else { // It's the top block
-                            block = createCustomBlock(topBlockMaterial, 0, y_layer, 0);
-                        }
-                        modelGroup.add(block);
-                    }
-                    
-                    modelGroup.userData = {
-                        date: contrib.dateObj.toISOString().split('T')[0],
-                        count: contrib.count,
-                        type: 'contribution_stack',
-                        isContributionObject: true,
-                        highlightableMeshes: modelGroup.children.slice(), // All blocks in this stack
-                        originalMaterials: modelGroup.children.map(mesh => mesh.material) // Store actual material instances
-                    };
+                let topTexture;
+                if (contrib.count === 1) {
+                    topTexture = count1Texture;
+                } else if (contrib.count >= 2 && contrib.count < 4) {
+                    topTexture = count2Texture;
+                } else if (contrib.count >= 4 && contrib.count < 10) {
+                    topTexture = count3Texture;
+                } else if (contrib.count >= 10 && contrib.count < 20) {
+                    topTexture = count4Texture;
+                } else { // count >= 20
+                    topTexture = count5Texture;
                 }
+                const topBlockMaterial = new THREE.MeshStandardMaterial({ map: topTexture, roughness: 0.7, metalness: 0.3 });
+
+                for (let y_layer = 0; y_layer < contrib.count; y_layer++) {
+                    let block;
+                    if (y_layer < contrib.count - 1) { // Not the top block
+                        block = createCustomBlock(stackBlockMaterial, 0, y_layer, 0);
+                    } else { // It's the top block
+                        block = createCustomBlock(topBlockMaterial, 0, y_layer, 0);
+                    }
+                    modelGroup.add(block);
+                }
+                
+                modelGroup.userData = {
+                    date: contrib.dateObj.toISOString().split('T')[0],
+                    count: contrib.count,
+                    type: 'contribution_stack',
+                    isContributionObject: true,
+                    highlightableMeshes: modelGroup.children.slice(), // All blocks in this stack
+                    originalMaterials: modelGroup.children.map(mesh => mesh.material) // Store actual material instances
+                };
                 contributionCubesGroup.add(modelGroup);
             });
             
