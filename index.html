@@ -78,6 +78,17 @@
         let tooltipElement;
 
         // --- Helper Functions ---
+        // Moved createBlock here to make it globally accessible
+        function createBlock(color, x, y, z) {
+            const geometry = new THREE.BoxGeometry(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
+            const material = new THREE.MeshStandardMaterial({ color: color, roughness: 0.65, metalness: 0.15 });
+            const block = new THREE.Mesh(geometry, material);
+            block.position.set(x * CUBE_SIZE, y * CUBE_SIZE + CUBE_SIZE / 2, z * CUBE_SIZE); // Center origin of block at its base
+            block.castShadow = true;
+            block.receiveShadow = true;
+            return block;
+        }
+
         function mapCountToColor(count) {
             if (count === 0) return 0x383838; // Darker grey for no contributions
             if (count >= 1 && count <= 2) return 0x0e4429;
@@ -252,16 +263,7 @@
             const startDateOfGrid = new Date(firstDate);
             startDateOfGrid.setDate(firstDate.getDate() - firstDate.getDay()); // Set to Sunday of the first week
 
-            // Helper function to create a single block
-            function createBlock(color, x, y, z) {
-                const geometry = new THREE.BoxGeometry(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
-                const material = new THREE.MeshStandardMaterial({ color: color, roughness: 0.65, metalness: 0.15 });
-                const block = new THREE.Mesh(geometry, material);
-                block.position.set(x * CUBE_SIZE, y * CUBE_SIZE + CUBE_SIZE / 2, z * CUBE_SIZE); // Center origin of block at its base
-                block.castShadow = true;
-                block.receiveShadow = true;
-                return block;
-            }
+            // Helper function createBlock was moved to global scope before init()
 
             sortedContributions.forEach(contrib => {
                 const date = contrib.dateObj;
