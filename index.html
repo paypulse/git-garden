@@ -46,52 +46,28 @@
         const GRID_WIDTH = WEEKS_IN_YEAR * (CUBE_SIZE + CUBE_SPACING);
         const GRID_DEPTH = DAYS_IN_WEEK * (CUBE_SIZE + CUBE_SPACING);
 
-        // --- Sky Cycle Variables with Lighting ---
-        const dawnColors = {
-            background: new THREE.Color(0xffa07a), // Light Salmon
-            fog: new THREE.Color(0xffd8b1),         // Wheat
-            lighting: { // Tuned for Tulips
-                hemisphereLight: { skyColor: new THREE.Color(0xffa07a), groundColor: new THREE.Color(0x504030), intensity: 0.8 }, 
-                ambientLight: { color: new THREE.Color(0xffa07a), intensity: 0.45 }, // Boosted ambient for overall visibility
-                directionalLight: { color: new THREE.Color(0xffebd0), intensity: 0.7, position: new THREE.Vector3(-GRID_WIDTH * 0.3, 60, GRID_DEPTH * 0.7) } // Less saturated warm light
-            }
-        };
-        const dayColors = {
-            background: new THREE.Color(0x87ceeb), // Sky Blue
-            fog: new THREE.Color(0xb0e0e6),         // Powder Blue
-            lighting: { // Tuned for Tulips
-                hemisphereLight: { skyColor: new THREE.Color(0x87ceeb), groundColor: new THREE.Color(0x888888), intensity: 0.9 }, // Slightly brighter ground
-                ambientLight: { color: new THREE.Color(0xfffff0), intensity: 0.4 }, // Pale yellow ambient, slightly reduced
-                directionalLight: { color: new THREE.Color(0xfff5e1), intensity: 0.8, position: new THREE.Vector3(GRID_WIDTH * 0.1, 80, GRID_DEPTH * 0.5) } // Softer, slightly warmer white directional
-            }
-        };
-        const duskColors = {
-            background: new THREE.Color(0xff7f50), // Coral
-            fog: new THREE.Color(0xffb347),         // Dark Salmon (using a more orangey fog)
-            lighting: { // Tuned for Tulips
-                hemisphereLight: { skyColor: new THREE.Color(0xff7f50), groundColor: new THREE.Color(0x504030), intensity: 0.75 },
-                ambientLight: { color: new THREE.Color(0xff7f50), intensity: 0.4 }, // Boosted ambient
-                directionalLight: { color: new THREE.Color(0xffc8a0), intensity: 0.8, position: new THREE.Vector3(GRID_WIDTH * 0.5, 60, GRID_DEPTH * 0.7) } // Golden hour, less saturated orange
-            }
-        };
-        const nightColors = {
-            background: new THREE.Color(0x000033), // Dark Navy
-            fog: new THREE.Color(0x000020),         // Very Dark Blue
-            lighting: { // Tuned for Tulips
-                hemisphereLight: { skyColor: new THREE.Color(0x252545), groundColor: new THREE.Color(0x101018), intensity: 0.4 }, // Slightly more intensity, subtle warmth in ground
-                ambientLight: { color: new THREE.Color(0x454555), intensity: 0.25 }, // More neutral cool ambient, slightly increased
-                directionalLight: { color: new THREE.Color(0x8080aa), intensity: 0.4, position: new THREE.Vector3(GRID_WIDTH * 0.2, 70, GRID_DEPTH * 1.0) } // Whiter moonlight, slightly more intensity
-            }
-        };
-        const skyCycle = [dawnColors, dayColors, duskColors, nightColors];
-        let currentSkyColorIndex = 0;
-        let nextSkyColorIndex = 1;
-        let skyTransitionProgress = 0;
-        const skyTransitionSpeed = 0.0005; // Adjust for speed of transition
-        // const skyPhaseDuration = 1; // This will be normalized by skyTransitionProgress >= 1.0
+        // --- Sky Cycle Variables with Lighting --- REMOVED
+        // --- Tulip Colors --- REMOVED
 
-        // --- Tulip Colors ---
-        const tulipColors = [new THREE.Color(0xff0000), /* Red */ new THREE.Color(0xffff00), /* Yellow */ new THREE.Color(0xffc0cb) /* Pink */];
+        // --- Minecraft Model Colors ---
+        const mc_colors = {
+            brown_dark: new THREE.Color(0x5C4033), // Dark Brown (Dirt/Soil)
+            brown_light: new THREE.Color(0x8B4513), // Saddle Brown (Soil)
+            green_dark: new THREE.Color(0x006400),  // Dark Green (Grass)
+            white: new THREE.Color(0xFFFFFF),
+            starbucks_green: new THREE.Color(0x00704A),
+            starbucks_door_brown: new THREE.Color(0x3D2B1F),
+            window_blue: new THREE.Color(0xADD8E6), // Light Blue
+            mcd_red: new THREE.Color(0xFF0000),
+            mcd_yellow: new THREE.Color(0xFFFF00),
+            mcd_door_grey: new THREE.Color(0x696969), // Dark Grey
+            lotte_light_grey: new THREE.Color(0xD3D3D3),
+            lotte_medium_grey: new THREE.Color(0xA9A9A9), // Changed from 0x808080 for better distinction
+            lotte_dark_blue_window: new THREE.Color(0x00008B),
+            lotte_white: new THREE.Color(0xF0F0F0), // Slightly off-white for Lotte
+            road_grey: new THREE.Color(0xC0C0C0) // Silver, as a light grey for road
+        };
+
 
         // --- Global Three.js Variables ---
         let scene, camera, renderer, controls;
@@ -123,71 +99,107 @@
             
             // Scene setup
             scene = new THREE.Scene();
-            // scene.background = new THREE.Color(SCENE_BACKGROUND_COLOR); // REMOVED for dynamic sky
-            scene.background = new THREE.Color().copy(skyCycle[0].background); // Initial background
+            scene.background = new THREE.Color(0x87CEEB); // Sky Blue
 
-            const gridWidth = WEEKS_IN_YEAR * (CUBE_SIZE + CUBE_SPACING);
-            const gridDepth = DAYS_IN_WEEK * (CUBE_SIZE + CUBE_SPACING);
-            // scene.fog = new THREE.Fog(FOG_COLOR, Math.max(gridWidth, gridDepth) * FOG_NEAR_FACTOR, Math.max(gridWidth, gridDepth) * FOG_FAR_FACTOR);
-            // Initial fog, color will be updated dynamically
-            scene.fog = new THREE.Fog(skyCycle[0].fog.getHex(), Math.max(gridWidth, gridDepth) * FOG_NEAR_FACTOR, Math.max(gridWidth, gridDepth) * FOG_FAR_FACTOR);
-            scene.fog.color.copy(skyCycle[0].fog);
-
+            // Fog
+            scene.fog = new THREE.Fog(0xD0E0F0, GRID_WIDTH * 1.5, GRID_WIDTH * 4.0); // Light blue/white fog
 
             contributionCubesGroup = new THREE.Group();
             scene.add(contributionCubesGroup);
+
+            // --- Minecraft Clouds ---
+            const cloudGroup = new THREE.Group();
+            const cloudMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+            
+            function createCloud(blocksData, x, y, z) {
+                const singleCloud = new THREE.Group();
+                blocksData.forEach(data => {
+                    const cloudBlockGeo = new THREE.BoxGeometry(data.size * CUBE_SIZE, data.size * CUBE_SIZE, data.size * CUBE_SIZE);
+                    const cloudBlock = new THREE.Mesh(cloudBlockGeo, cloudMaterial);
+                    cloudBlock.position.set(data.x * CUBE_SIZE, data.y * CUBE_SIZE, data.z * CUBE_SIZE);
+                    cloudBlock.castShadow = false;
+                    cloudBlock.receiveShadow = false; // Clouds typically don't receive shadows either
+                    singleCloud.add(cloudBlock);
+                });
+                singleCloud.position.set(x, y, z);
+                cloudGroup.add(singleCloud);
+            }
+
+            // Cloud definitions (array of blocks per cloud: {x,y,z offset from cloud center, size multiplier})
+            const cloudShape1 = [ {x:0,y:0,z:0,size:2}, {x:1,y:0,z:0,size:2}, {x:-1,y:0,z:0,size:1.5}, {x:0,y:1,z:0,size:1.5} ];
+            const cloudShape2 = [ {x:0,y:0,z:0,size:2.5}, {x:1.5,y:0,z:0,size:2}, {x:-1,y:0,z:0.5,size:2}, {x:0.5,y:0.5,z:0,size:1.5} ];
+            const cloudShape3 = [ {x:0,y:0,z:0,size:2}, {x:1,y:0,z:0,size:1.5}, {x:2,y:0,z:0,size:2}, {x:0.5,y:0,z:1,size:1.5} ];
+
+            const maxTowerHeightEstimate = (16 + 2) * CUBE_SIZE; // Estimate max Lotte tower height + buffer
+
+            createCloud(cloudShape1, GRID_WIDTH * 0.2, maxTowerHeightEstimate + 20, -GRID_DEPTH * 1.5);
+            createCloud(cloudShape2, GRID_WIDTH * 0.8, maxTowerHeightEstimate + 30, -GRID_DEPTH * 0.5);
+            createCloud(cloudShape3, GRID_WIDTH * 0.5, maxTowerHeightEstimate + 25, GRID_DEPTH * 1.2);
+            createCloud(cloudShape1, -GRID_WIDTH * 0.1, maxTowerHeightEstimate + 35, GRID_DEPTH * 0.8);
+            
+            scene.add(cloudGroup);
+
 
             // Camera setup
             camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 3000); // Adjusted FOV
             // Initial camera position will be refined after graph generation
 
-            // Lighting setup - Initialized with the first sky phase
-            const initialLighting = skyCycle[0].lighting;
-
-            // HemisphereLight (now global)
-            hemisphereLight = new THREE.HemisphereLight(
-                initialLighting.hemisphereLight.skyColor,
-                initialLighting.hemisphereLight.groundColor,
-                initialLighting.hemisphereLight.intensity
-            );
+            // --- Static Sunny Day Lighting ---
+            // HemisphereLight
+            hemisphereLight = new THREE.HemisphereLight(0xADD8E6, 0xBDB76B, 0.7); // Light blue sky, DarkKhaki ground
             scene.add(hemisphereLight);
 
-            // Ambient light (now global)
-            ambientLight = new THREE.AmbientLight(
-                initialLighting.ambientLight.color,
-                initialLighting.ambientLight.intensity
-            );
+            // Ambient light
+            ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.5);
             scene.add(ambientLight);
 
-            // Directional light (now global)
-            directionalLight = new THREE.DirectionalLight(
-                initialLighting.directionalLight.color,
-                initialLighting.directionalLight.intensity
-            );
-            directionalLight.position.copy(initialLighting.directionalLight.position);
+            // Directional light (Sun)
+            directionalLight = new THREE.DirectionalLight(0xFFFFE0, 1.0); // Slightly yellow sun
+            directionalLight.position.set(GRID_WIDTH * 0.3, 150, GRID_DEPTH * 0.2); // Higher and angled
             directionalLight.castShadow = true;
             directionalLight.shadow.mapSize.width = 4096;
             directionalLight.shadow.mapSize.height = 4096;
             directionalLight.shadow.camera.near = 10;
-            directionalLight.shadow.camera.far = 200; 
-            // Shadow camera frustum uses GRID_WIDTH and GRID_DEPTH (now global)
-            directionalLight.shadow.camera.left = -GRID_WIDTH / 1.8;
-            directionalLight.shadow.camera.right = GRID_WIDTH / 1.8;
-            directionalLight.shadow.camera.top = GRID_DEPTH / 1.5;
-            directionalLight.shadow.camera.bottom = -GRID_DEPTH / 1.5;
+            directionalLight.shadow.camera.far = 300; // Increased far for larger scene with high sun
+            directionalLight.shadow.camera.left = -GRID_WIDTH * 1.2; // Expanded frustum
+            directionalLight.shadow.camera.right = GRID_WIDTH * 1.2;
+            directionalLight.shadow.camera.top = GRID_DEPTH * 1.2;
+            directionalLight.shadow.camera.bottom = -GRID_DEPTH * 1.2;
             directionalLight.shadow.bias = -0.0005;
             scene.add(directionalLight);
             // const shadowHelper = new THREE.CameraHelper(directionalLight.shadow.camera);
             // scene.add(shadowHelper);
             
-            // Ground plane
-            const planeGeometry = new THREE.PlaneGeometry(GRID_WIDTH * 1.5, GRID_DEPTH * 3); // Larger plane
-            const planeMaterial = new THREE.MeshStandardMaterial({ color: 0x202020, roughness: 0.9, metalness: 0.1 });
-            const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-            plane.rotation.x = -Math.PI / 2;
-            plane.position.y = -0.2; // Ensure it's below cubes, even those with 0.1 height
-            plane.receiveShadow = true;
-            scene.add(plane);
+            // Ground plane - REMOVED OLD PLANE
+            // const planeGeometry = new THREE.PlaneGeometry(GRID_WIDTH * 2.5, GRID_DEPTH * 4); 
+            // const planeMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22, roughness: 0.9, metalness: 0.1 }); 
+            // const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+            // plane.rotation.x = -Math.PI / 2;
+            // plane.position.y = -CUBE_SIZE / 2 -0.01; 
+            // plane.receiveShadow = true;
+            // scene.add(plane);
+
+            // --- Blocky Road Surface ---
+            const roadGroup = new THREE.Group();
+            const roadBlockColor = mc_colors.road_grey; 
+            const roadWidthBlocks = Math.floor((GRID_WIDTH * 2.0) / CUBE_SIZE); // Adjusted multiplier for desired width
+            const roadDepthBlocks = Math.floor((GRID_DEPTH * 3.0) / CUBE_SIZE); // Adjusted multiplier for desired depth
+            const yPositionForRoadBlocks = -1; // One block level below the base of the contribution models.
+                                               // Top of these blocks will be at Y=0.
+
+            for (let i = -Math.floor(roadWidthBlocks / 2); i <= Math.floor(roadWidthBlocks / 2); i++) {
+                for (let j = -Math.floor(roadDepthBlocks / 2); j <= Math.floor(roadDepthBlocks / 2); j++) {
+                    // createBlock's y parameter is block layer index.
+                    // y=-1 means its center is at -0.5*CUBE_SIZE, so its top surface is at Y=0.
+                    const block = createBlock(roadBlockColor, i, yPositionForRoadBlocks, j);
+                    // Road blocks should not cast shadows themselves but should receive them.
+                    block.castShadow = false; 
+                    block.receiveShadow = true;
+                    roadGroup.add(block);
+                }
+            }
+            scene.add(roadGroup);
+
 
             // Renderer setup
             renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -240,6 +252,17 @@
             const startDateOfGrid = new Date(firstDate);
             startDateOfGrid.setDate(firstDate.getDate() - firstDate.getDay()); // Set to Sunday of the first week
 
+            // Helper function to create a single block
+            function createBlock(color, x, y, z) {
+                const geometry = new THREE.BoxGeometry(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
+                const material = new THREE.MeshStandardMaterial({ color: color, roughness: 0.65, metalness: 0.15 });
+                const block = new THREE.Mesh(geometry, material);
+                block.position.set(x * CUBE_SIZE, y * CUBE_SIZE + CUBE_SIZE / 2, z * CUBE_SIZE); // Center origin of block at its base
+                block.castShadow = true;
+                block.receiveShadow = true;
+                return block;
+            }
+
             sortedContributions.forEach(contrib => {
                 const date = contrib.dateObj;
                 const count = contrib.count;
@@ -249,140 +272,166 @@
                 const dayDiff = Math.floor(timeDiff / (1000 * 3600 * 24));
                 const weekIndex = Math.floor(dayDiff / 7);
 
-                if (weekIndex < 0 || weekIndex >= WEEKS_IN_YEAR) return; // Skip dates outside the 53-week window
+                if (weekIndex < 0 || weekIndex >= WEEKS_IN_YEAR) return;
 
                 const x_position = weekIndex * (CUBE_SIZE + CUBE_SPACING);
                 const z_position = dayOfWeek * (CUBE_SIZE + CUBE_SPACING);
                 
-                let objectGroup = new THREE.Group();
-                objectGroup.position.set(x_position, 0, z_position);
+                let modelGroup = new THREE.Group();
+                modelGroup.position.set(x_position, 0, z_position); // Base of models at y=0
+
+                let modelType = '';
+                let primaryColor = null; // For userData, if needed for highlighting
 
                 if (count === 0) {
-                    // Bare Ground
-                    const groundRadius = CUBE_SIZE * 0.3;
-                    const groundGeometry = new THREE.CylinderGeometry(groundRadius, groundRadius, 0.05, 16);
-                    const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x654321, roughness: 0.9, metalness: 0.0 });
-                    const groundDisc = new THREE.Mesh(groundGeometry, groundMaterial);
-                    groundDisc.position.y = -0.15 + 0.025; // Slightly above plane, accounting for its own height
-                    groundDisc.castShadow = false;
-                    groundDisc.receiveShadow = true;
-                    objectGroup.add(groundDisc);
-                    objectGroup.userData = {
-                        date: date.toISOString().split('T')[0],
-                        count: count,
-                        isContributionObject: true,
-                        isBareGround: true,
-                        originalColor: new THREE.Color(0x654321), // Store its own color
-                        bloomMesh: groundDisc // Can be itself for potential minor highlight
-                    };
-                } else if (count === 1) {
-                    // Sprout
-                    const sproutMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00, roughness: 0.7, metalness: 0.1 });
-                    const leafGeometry = new THREE.SphereGeometry(CUBE_SIZE * 0.15, 6, 4);
-                    leafGeometry.scale(1, 1.8, 0.5); // Elongate and flatten
-
-                    const leaf1 = new THREE.Mesh(leafGeometry, sproutMaterial);
-                    leaf1.position.set(0, CUBE_SIZE * 0.1, 0);
-                    leaf1.rotation.z = Math.PI / 6;
-                    leaf1.rotation.y = Math.PI / 4;
-                    leaf1.castShadow = true;
-                    leaf1.receiveShadow = true;
-                    objectGroup.add(leaf1);
-
-                    const leaf2 = new THREE.Mesh(leafGeometry, sproutMaterial);
-                    leaf2.position.set(0, CUBE_SIZE * 0.12, 0); // Slightly different height
-                    leaf2.rotation.z = -Math.PI / 6;
-                    leaf2.rotation.y = -Math.PI / 4;
-                    leaf2.castShadow = true;
-                    leaf2.receiveShadow = true;
-                    objectGroup.add(leaf2);
-                    
-                    objectGroup.userData = {
-                        date: date.toISOString().split('T')[0],
-                        count: count,
-                        isContributionObject: true,
-                        isSprout: true,
-                        originalColor: new THREE.Color(0x00ff00),
-                        bloomMesh: leaf1 // Highlight one of the leaves
-                    };
-                } else { // count > 1 (Tulip)
-                    const stemHeight = mapCountToHeight(count); // Ensure this is appropriate for tulips
-                    const stemRadius = CUBE_SIZE * 0.05;
-
-                    // Stem
-                    const stemMaterial = new THREE.MeshStandardMaterial({ color: 0x008000, roughness: 0.7, metalness: 0.1 });
-                    const stemGeometry = new THREE.CylinderGeometry(stemRadius, stemRadius, stemHeight, 8);
-                    const stem = new THREE.Mesh(stemGeometry, stemMaterial);
-                    stem.position.y = stemHeight / 2;
-                    stem.castShadow = true;
-                    stem.receiveShadow = true;
-                    objectGroup.add(stem);
-
-                    // Tulip Leaves
-                    const tulipLeafMaterial = new THREE.MeshStandardMaterial({ color: 0x007000, roughness: 0.6, metalness: 0.1 });
-                    const leafShape = new THREE.Shape();
-                    leafShape.moveTo(0, 0);
-                    leafShape.bezierCurveTo(0.1, 0.3, 0.15, 0.7, 0.05, stemHeight * 0.4); // Broader base, tapers
-                    leafShape.bezierCurveTo(-0.05, 0.7, -0.1, 0.3, 0, 0);
-                    const leafGeometry = new THREE.ShapeGeometry(leafShape);
-                    
-                    const numTulipLeaves = count < 5 ? 1 : 2;
-                    for (let i = 0; i < numTulipLeaves; i++) {
-                        const tulipLeaf = new THREE.Mesh(leafGeometry, tulipLeafMaterial);
-                        tulipLeaf.position.set(stemRadius * (i === 0 ? 1.5 : -1.5), stemHeight * 0.1, 0);
-                        tulipLeaf.rotation.x = Math.PI / 12 * (i === 0 ? 1 : -1);
-                        tulipLeaf.rotation.y = Math.PI / 2 + (i === 0 ? Math.PI / 6 : -Math.PI / 6);
-                        tulipLeaf.rotation.z = Math.PI / 8 * (i === 0 ? -1 : 1);
-                        tulipLeaf.castShadow = true;
-                        tulipLeaf.receiveShadow = true;
-                        objectGroup.add(tulipLeaf);
+                    modelType = 'bare_ground';
+                    primaryColor = mc_colors.brown_dark;
+                    // 3x3 grid of blocks (browns and dark green)
+                    for (let i = -1; i <= 1; i++) {
+                        for (let j = -1; j <= 1; j++) {
+                            let blockColor = mc_colors.brown_light;
+                            if (Math.random() < 0.3) blockColor = mc_colors.brown_dark;
+                            else if (Math.random() < 0.2) blockColor = mc_colors.green_dark; // Fewer green blocks
+                            modelGroup.add(createBlock(blockColor, i, 0, j));
+                        }
                     }
-
-                    // Tulip Bloom
-                    const bloomHeadGroup = new THREE.Group();
-                    const headScale = 0.2 + Math.log1p(count -1) * 0.1; // Scale bloom with count (starting from count=2)
-                    bloomHeadGroup.scale.set(headScale, headScale, headScale);
-                    bloomHeadGroup.position.y = stemHeight;
-                    objectGroup.add(bloomHeadGroup);
-
-                    const petalColor = tulipColors[Math.floor(Math.random() * tulipColors.length)];
-                    const petalMaterial = new THREE.MeshStandardMaterial({ 
-                        color: petalColor, 
-                        roughness: 0.5, 
-                        metalness: 0.2,
-                        side: THREE.DoubleSide // Ensure inside of petals are visible
-                    });
-                    
-                    // Simple petal geometry (elongated sphere part)
-                    const petalShapeGeometry = new THREE.SphereGeometry(CUBE_SIZE * 0.5, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2.5);
-                    petalShapeGeometry.scale(0.6, 1, 0.3); // Elongate and flatten
-                    
-                    const numPetals = 5; // Fixed number of petals for a simpler tulip look
-                    for (let i = 0; i < numPetals; i++) {
-                        const petal = new THREE.Mesh(petalShapeGeometry, petalMaterial);
-                        const angle = (i / numPetals) * Math.PI * 2;
-                        petal.position.set(
-                            Math.cos(angle) * CUBE_SIZE * 0.15, 
-                            CUBE_SIZE * 0.3, // Lift petals to form cup base
-                            Math.sin(angle) * CUBE_SIZE * 0.15
-                        );
-                        petal.rotation.y = -angle + Math.PI / 2; // Orient petal outwards
-                        petal.rotation.x = Math.PI / 4; // Angle upwards
-                        petal.castShadow = true;
-                        petal.receiveShadow = true;
-                        bloomHeadGroup.add(petal);
+                } else if (count >= 1 && count <= 2) {
+                    modelType = 'starbucks';
+                    primaryColor = mc_colors.starbucks_green;
+                    // Approx 3x3 base, 3 blocks high.
+                    // Layer Y=0 (Base - can be slightly darker white or light grey for differentiation)
+                    for (let i = -1; i <= 1; i++) {
+                        for (let j = -1; j <= 1; j++) {
+                            modelGroup.add(createBlock(mc_colors.lotte_light_grey, i, 0, j));
+                        }
                     }
+                    // Layer Y=1 (Walls)
+                    // Front: white, brown (door), white
+                    modelGroup.add(createBlock(mc_colors.white, -1, 1, -1));
+                    modelGroup.add(createBlock(mc_colors.starbucks_door_brown, 0, 1, -1)); 
+                    modelGroup.add(createBlock(mc_colors.white, 1, 1, -1));
+                    // Back: all white
+                    modelGroup.add(createBlock(mc_colors.white, -1, 1, 1));
+                    modelGroup.add(createBlock(mc_colors.white, 0, 1, 1));
+                    modelGroup.add(createBlock(mc_colors.white, 1, 1, 1));
+                    // Sides (with logo/window)
+                    modelGroup.add(createBlock(mc_colors.white, -1, 1, 0)); // Left wall
+                    modelGroup.add(createBlock(mc_colors.starbucks_green, 1, 1, 0)); // Right wall (logo placeholder)
                     
-                    objectGroup.userData = {
-                        date: date.toISOString().split('T')[0],
-                        count: count,
-                        isContributionObject: true,
-                        isTulip: true,
-                        originalColor: petalColor.clone(),
-                        bloomMesh: bloomHeadGroup // Highlight the whole bloom head
-                    };
+                    // Layer Y=2 (Upper Walls / Start of Roof elements)
+                     // Front: white, white (above door), white
+                    modelGroup.add(createBlock(mc_colors.white, -1, 2, -1));
+                    modelGroup.add(createBlock(mc_colors.white, 0, 2, -1)); 
+                    modelGroup.add(createBlock(mc_colors.white, 1, 2, -1));
+                    // Back: all white
+                    modelGroup.add(createBlock(mc_colors.white, -1, 2, 1));
+                    modelGroup.add(createBlock(mc_colors.white, 0, 2, 1));
+                    modelGroup.add(createBlock(mc_colors.white, 1, 2, 1));
+                    // Sides
+                    modelGroup.add(createBlock(mc_colors.window_blue, -1, 2, 0)); // Left wall (window)
+                    modelGroup.add(createBlock(mc_colors.white, 1, 2, 0));    // Right wall
+                    
+                    // Layer Y=3 (Roof)
+                    for (let i = -1; i <= 1; i++) {
+                        for (let j = -1; j <= 1; j++) {
+                            modelGroup.add(createBlock(mc_colors.starbucks_green, i, 3, j));
+                        }
+                    }
+                } else if (count >= 3 && count <= 4) {
+                    modelType = 'mcdonalds';
+                    primaryColor = mc_colors.mcd_red;
+                    // Approx 4x3 base, 3-4 blocks high.
+                    // Base Layer Y=0 (slightly darker red or grey)
+                    for (let i = -1.5; i <= 1.5; i++) { // 4 blocks wide ( -1.5, -0.5, 0.5, 1.5)
+                        for (let j = -0.5; j <= 0.5; j++) { // 2 blocks deep ( -0.5, 0.5 ) to make it 4x2 base
+                            modelGroup.add(createBlock(mc_colors.lotte_medium_grey, i, 0, j));
+                        }
+                    }
+                    // Walls Layer Y=1, Y=2 (Red)
+                    for (let y = 1; y <= 2; y++) {
+                        // Front and Back walls (4 blocks wide)
+                        for (let i = -1.5; i <= 1.5; i++) {
+                            modelGroup.add(createBlock(mc_colors.mcd_red, i, y, -0.5)); // Front
+                            modelGroup.add(createBlock(mc_colors.mcd_red, i, y, 0.5));  // Back
+                        }
+                        // Side walls (excluding corners already placed)
+                        modelGroup.add(createBlock(mc_colors.mcd_red, -1.5, y, 0)); 
+                        modelGroup.add(createBlock(mc_colors.mcd_red, 1.5, y, 0));
+                    }
+                    // Door (center front on Y=1)
+                    modelGroup.add(createBlock(mc_colors.mcd_door_grey, -0.5, 1, -0.5)); // Assuming door is 1 block wide
+                    modelGroup.add(createBlock(mc_colors.mcd_door_grey, 0.5, 1, -0.5));  // Wider door - 2 blocks
+                    modelGroup.add(createBlock(mc_colors.mcd_red, -0.5, 2, -0.5)); // Red block above door
+                    modelGroup.add(createBlock(mc_colors.mcd_red, 0.5, 2, -0.5));  // Red block above door
+
+                    // Roof Layer Y=3 (Yellow)
+                    for (let i = -1.5; i <= 1.5; i++) {
+                        for (let j = -0.5; j <= 0.5; j++) {
+                            modelGroup.add(createBlock(mc_colors.mcd_yellow, i, 3, j));
+                        }
+                    }
+                    // "M" Hint (Yellow on front roof edge, simple version)
+                    modelGroup.add(createBlock(mc_colors.mcd_yellow, -0.5, 2, -1.5)); // Lower part of M on front wall
+                    modelGroup.add(createBlock(mc_colors.mcd_yellow, 0.5, 2, -1.5));  // Lower part of M
+                    modelGroup.add(createBlock(mc_colors.mcd_yellow, 0, 3, -1.5));    // Top part of M on roof
+                
+                } else { // count >= 5
+                    modelType = 'lotte_tower';
+                    primaryColor = mc_colors.lotte_light_grey;
+                    const towerHeight = 12 + Math.min(Math.floor((count - 5) / 2), 4); // Base 12, +1 for every 2 extra counts, max 16
+
+                    // Base section (4x4 footprint, e.g., Y=0 to Y=2)
+                    for (let y = 0; y < 3; y++) {
+                        for (let i = -1.5; i <= 1.5; i++) {
+                            for (let j = -1.5; j <= 1.5; j++) {
+                                let color = ( (i+j) % 2 === 0) ? mc_colors.lotte_light_grey : mc_colors.lotte_medium_grey;
+                                modelGroup.add(createBlock(color, i, y, j));
+                            }
+                        }
+                    }
+                    // Mid-section 1 (3x3 footprint, e.g., Y=3 to Y=5)
+                    for (let y = 3; y < 6; y++) {
+                        for (let i = -0.5; i <= 0.5; i++) { // Centered 3 blocks
+                            for (let j = -0.5; j <= 0.5; j++) {
+                                let color = mc_colors.lotte_light_grey;
+                                if (Math.random() < 0.3) color = mc_colors.lotte_dark_blue_window;
+                                modelGroup.add(createBlock(color, i, y, j));
+                            }
+                        }
+                    }
+                    // Mid-section 2 (2x2 footprint, e.g., Y=6 to Y=8)
+                     for (let y = 6; y < 9; y++) {
+                        for (let i = -0.5; i <= 0.5; i+=1) { // Centered 2 blocks
+                             for (let j = -0.5; j <= 0.5; j+=1) {
+                                let color = mc_colors.lotte_white;
+                                if (Math.random() < 0.4) color = mc_colors.lotte_dark_blue_window;
+                                modelGroup.add(createBlock(color, i, y, j));
+                            }
+                        }
+                    }
+                     // Top section (2x2 narrowing to 1x1 or similar, Y=9 to towerHeight-1)
+                    for (let y = 9; y < towerHeight -1 ; y++) {
+                        let size = (y < towerHeight - 3) ? 0.5 : 0; // Make top part narrower (effectively 1x1 for last few layers)
+                        for (let i = -size; i <= size; i+=1) {
+                             for (let j = -size; j <= size; j+=1) {
+                                modelGroup.add(createBlock(mc_colors.lotte_white, i, y, j));
+                            }
+                        }
+                    }
+                    // Spire (Y=towerHeight-1)
+                    modelGroup.add(createBlock(mc_colors.lotte_light_grey, 0, towerHeight-1, 0));
                 }
-                contributionCubesGroup.add(objectGroup);
+
+                modelGroup.userData = {
+                    date: date.toISOString().split('T')[0],
+                    count: count,
+                    type: modelType,
+                    isContributionObject: true, 
+                    originalColor: primaryColor ? primaryColor.clone() : null, // Store a base color for potential highlight
+                    // bloomMesh might refer to the modelGroup itself or a specific part if complex highlighting is needed
+                    highlightableMeshes: modelGroup.children.slice() // Store all children for group highlight
+                };
+                contributionCubesGroup.add(modelGroup);
             });
             
             // --- Final Camera and Controls Target Adjustment ---
@@ -422,35 +471,22 @@
                 }
 
                 if (contributionGroup) {
-                    if (intersectedCube !== contributionGroup) { 
-                        if (intersectedCube && intersectedCube.userData.bloomMesh) {
-                            if (intersectedCube.userData.isTulip) {
-                                // Reset color for all petals in the bloomMesh group
-                                intersectedCube.userData.bloomMesh.children.forEach(child => {
-                                    if(child.material) child.material.color.set(intersectedCube.userData.originalColor);
-                                });
-                            } else if (intersectedCube.userData.bloomMesh.material) { // For single mesh objects like sprout leaf or ground
-                                intersectedCube.userData.bloomMesh.material.color.set(intersectedCube.userData.originalColor);
-                            }
+                    if (intersectedCube !== contributionGroup) {
+                        if (intersectedCube && intersectedCube.userData.highlightableMeshes) {
+                            // Reset previous group's emissive
+                            intersectedCube.userData.highlightableMeshes.forEach(mesh => {
+                                if (mesh.material) mesh.material.emissive.setHex(0x000000);
+                            });
                         }
                         intersectedCube = contributionGroup;
-                        if (intersectedCube.userData.bloomMesh) {
-                            if (intersectedCube.userData.isTulip) {
-                                intersectedCube.userData.bloomMesh.children.forEach(child => {
-                                     if(child.material) child.material.color.set(HIGHLIGHT_COLOR);
-                                });
-                            } else if (intersectedCube.userData.bloomMesh.material) { // For single mesh objects
-                                if (!intersectedCube.userData.isBareGround) { // Don't highlight bare ground with yellow
-                                   intersectedCube.userData.bloomMesh.material.color.set(HIGHLIGHT_COLOR);
-                                } else {
-                                    // Optionally, slightly lighten bare ground
-                                    const groundHighlightColor = new THREE.Color(0x7a5f3e); // Slightly lighter brown
-                                    intersectedCube.userData.bloomMesh.material.color.set(groundHighlightColor);
-                                }
-                            }
+                        if (intersectedCube.userData.highlightableMeshes) {
+                            // Set emissive for current group
+                            intersectedCube.userData.highlightableMeshes.forEach(mesh => {
+                                if (mesh.material) mesh.material.emissive.setHex(0x555555); // Moderate grey emissive
+                            });
                         }
                         tooltipElement.style.display = 'block';
-                        tooltipElement.innerHTML = `Date: ${intersectedCube.userData.date}<br>Contributions: ${intersectedCube.userData.count}`;
+                        tooltipElement.innerHTML = `Date: ${intersectedCube.userData.date}<br>Contributions: ${intersectedCube.userData.count}<br>Type: ${intersectedCube.userData.type}`;
                     }
                     tooltipElement.style.left = (event.clientX + 10) + 'px';
                     tooltipElement.style.top = (event.clientY - 25) + 'px';
@@ -462,15 +498,11 @@
             }
         }
         
-        function hideTooltipAndResetObject() { // Renamed from hideTooltipAndResetFlower
-            if (intersectedCube && intersectedCube.userData.bloomMesh) {
-                if (intersectedCube.userData.isTulip) {
-                    intersectedCube.userData.bloomMesh.children.forEach(child => {
-                        if(child.material) child.material.color.set(intersectedCube.userData.originalColor);
-                    });
-                } else if (intersectedCube.userData.bloomMesh.material) { // For single mesh objects
-                     intersectedCube.userData.bloomMesh.material.color.set(intersectedCube.userData.originalColor);
-                }
+        function hideTooltipAndResetObject() { 
+            if (intersectedCube && intersectedCube.userData.highlightableMeshes) {
+                intersectedCube.userData.highlightableMeshes.forEach(mesh => {
+                     if (mesh.material) mesh.material.emissive.setHex(0x000000);
+                });
                 intersectedCube = null;
             }
             tooltipElement.style.display = 'none';
@@ -486,52 +518,7 @@
         function animate() {
             requestAnimationFrame(animate);
 
-            // Update sky
-            skyTransitionProgress += skyTransitionSpeed;
-            if (skyTransitionProgress >= 1.0) {
-                skyTransitionProgress = 0;
-                currentSkyColorIndex = (currentSkyColorIndex + 1) % skyCycle.length;
-                nextSkyColorIndex = (nextSkyColorIndex + 1) % skyCycle.length;
-            }
-            const currentColorSet = skyCycle[currentSkyColorIndex];
-            const nextColorSet = skyCycle[nextSkyColorIndex];
-            
-            if (scene.background.isColor) { // Ensure scene.background is a THREE.Color object
-                scene.background.lerpColors(currentColorSet.background, nextColorSet.background, skyTransitionProgress);
-            } else { // Fallback if it's not (e.g. null or texture) - though we set it to a color in init
-                scene.background = new THREE.Color().lerpColors(currentColorSet.background, nextColorSet.background, skyTransitionProgress);
-            }
-            
-            if (scene.fog && scene.fog.color.isColor) {
-                scene.fog.color.lerpColors(currentColorSet.fog, nextColorSet.fog, skyTransitionProgress);
-            }
-
-            // Update lighting
-            const currentLighting = currentColorSet.lighting;
-            const nextLighting = nextColorSet.lighting;
-
-            // HemisphereLight
-            if (hemisphereLight) {
-                hemisphereLight.color.lerpColors(currentLighting.hemisphereLight.skyColor, nextLighting.hemisphereLight.skyColor, skyTransitionProgress);
-                hemisphereLight.groundColor.lerpColors(currentLighting.hemisphereLight.groundColor, nextLighting.hemisphereLight.groundColor, skyTransitionProgress);
-                hemisphereLight.intensity = THREE.MathUtils.lerp(currentLighting.hemisphereLight.intensity, nextLighting.hemisphereLight.intensity, skyTransitionProgress);
-            }
-
-            // AmbientLight
-            if (ambientLight) {
-                ambientLight.color.lerpColors(currentLighting.ambientLight.color, nextLighting.ambientLight.color, skyTransitionProgress);
-                ambientLight.intensity = THREE.MathUtils.lerp(currentLighting.ambientLight.intensity, nextLighting.ambientLight.intensity, skyTransitionProgress);
-            }
-
-            // DirectionalLight
-            if (directionalLight) {
-                directionalLight.color.lerpColors(currentLighting.directionalLight.color, nextLighting.directionalLight.color, skyTransitionProgress);
-                directionalLight.intensity = THREE.MathUtils.lerp(currentLighting.directionalLight.intensity, nextLighting.directionalLight.intensity, skyTransitionProgress);
-                directionalLight.position.lerpVectors(currentLighting.directionalLight.position, nextLighting.directionalLight.position, skyTransitionProgress);
-                // If directionalLight.target changes, or if you want it to always point to scene center:
-                // directionalLight.target.position.set(controls.target.x, controls.target.y, controls.target.z); // Assuming controls.target is the scene center
-                // scene.add(directionalLight.target); // if target is a new object
-            }
+            // Update sky - REMOVED DYNAMIC LOGIC
 
             controls.update(); // Only if enableDamping or autoRotate is true
             renderer.render(scene, camera);
