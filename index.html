@@ -51,27 +51,27 @@
 
         // --- Minecraft Model Colors ---
         const mc_colors = {
-            brown_dark: new THREE.Color(0x5C4033), // Dark Brown (Dirt/Soil)
-            brown_light: new THREE.Color(0x8B4513), // Saddle Brown (Soil)
-            green_dark: new THREE.Color(0x006400),  // Dark Green (Grass)
-            white: new THREE.Color(0xFFFFFF),
-            starbucks_green: new THREE.Color(0x00704A),
-            starbucks_door_brown: new THREE.Color(0x3D2B1F),
-            window_blue: new THREE.Color(0xADD8E6), // Light Blue
-            mcd_red: new THREE.Color(0xFF0000),
-            mcd_yellow: new THREE.Color(0xFFFF00),
-            mcd_door_grey: new THREE.Color(0x696969), // Dark Grey
-            lotte_light_grey: new THREE.Color(0xD3D3D3),
-            lotte_medium_grey: new THREE.Color(0xA9A9A9), // Changed from 0x808080 for better distinction (also for stone)
-            lotte_dark_blue_window: new THREE.Color(0x00008B),
-            lotte_white: new THREE.Color(0xF0F0F0), // Slightly off-white for Lotte
-            road_grey: new THREE.Color(0xC0C0C0), // Silver, as a light grey for road
-            // New Block Type Colors
+            // Core/General Colors
+            brown_dark: new THREE.Color(0x5C4033),         // Dark Brown (Dirt/Soil) - Retained
+            soil_brown: new THREE.Color(0x8B4513),         // SaddleBrown (replaces brown_light) - For new theme
+            green_dark: new THREE.Color(0x006400),         // Dark Green (Grass) - Retained
+            white: new THREE.Color(0xFFFFFF),              // White - Retained
+            stone_grey: new THREE.Color(0xA9A9A9),         // Medium Grey (replaces lotte_medium_grey, for stone) - Retained from single block theme
+
+            // New Theme Specific Colors
+            wood_plank: new THREE.Color(0xDEB887),         // BurlyWood - For new theme
+
+            // Single Block Theme Colors (retained for now, might be reused or removed if truly unused later)
             grass_block_green: new THREE.Color(0x228B22),   // ForestGreen
             sand_block_beige: new THREE.Color(0xF4A460),    // SandyBrown
-            // stone_block_grey is mc_colors.lotte_medium_grey (0xA9A9A9)
             lava_block_orange: new THREE.Color(0xFF4500),   // OrangeRed
-            lava_block_emissive: new THREE.Color(0xFF8C00)  // DarkOrange (for emissive glow)
+            lava_block_emissive: new THREE.Color(0xFF8C00), // DarkOrange (for emissive glow)
+
+            // REMOVED Unused Model-Specific Colors:
+            // starbucks_green, starbucks_door_brown, window_blue
+            // mcd_red, mcd_yellow, mcd_door_grey
+            // lotte_light_grey, lotte_dark_blue_window, lotte_white
+            // road_grey
         };
 
 
@@ -163,15 +163,15 @@
 
             // --- Static Sunny Day Lighting ---
             // HemisphereLight
-            hemisphereLight = new THREE.HemisphereLight(0xADD8E6, 0xBDB76B, 0.7); // Light blue sky, DarkKhaki ground
+            hemisphereLight = new THREE.HemisphereLight(0xADD8E6, 0xA0522D, 0.7); // Light blue sky, Sienna ground
             scene.add(hemisphereLight);
 
             // Ambient light
-            ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.5);
+            ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.4); // Reduced intensity
             scene.add(ambientLight);
 
             // Directional light (Sun)
-            directionalLight = new THREE.DirectionalLight(0xFFFFE0, 1.0); // Slightly yellow sun
+            directionalLight = new THREE.DirectionalLight(0xFFFFE0, 0.9); // Slightly yellow sun, reduced intensity
             directionalLight.position.set(GRID_WIDTH * 0.3, 150, GRID_DEPTH * 0.2); // Higher and angled
             directionalLight.castShadow = true;
             directionalLight.shadow.mapSize.width = 4096;
@@ -199,15 +199,31 @@
 
             // --- Blocky Road Surface --- REMOVED
 
-            // --- Black Ground Plane ---
-            const blackGroundMaterial = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.8, metalness: 0.2 });
-            const groundPlaneGeometry = new THREE.PlaneGeometry(GRID_WIDTH * 3, GRID_DEPTH * 5); // Large enough to cover visible area
-            const groundPlane = new THREE.Mesh(groundPlaneGeometry, blackGroundMaterial);
-            groundPlane.rotation.x = -Math.PI / 2; // Make it horizontal
-            groundPlane.position.y = -0.01;      // Slightly below Y=0 so objects at Y=0 rest on it.
-                                                 // Models are at Y=0 (bottom surface), so this plane is just under them.
-            groundPlane.receiveShadow = true;
-            scene.add(groundPlane);
+            // --- Black Ground Plane --- REMOVED
+            // const blackGroundMaterial = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.8, metalness: 0.2 });
+            // const groundPlaneGeometry = new THREE.PlaneGeometry(GRID_WIDTH * 3, GRID_DEPTH * 5); 
+            // const groundPlane = new THREE.Mesh(groundPlaneGeometry, blackGroundMaterial);
+            // groundPlane.rotation.x = -Math.PI / 2; 
+            // groundPlane.position.y = -0.01;      
+            // groundPlane.receiveShadow = true;
+            // scene.add(groundPlane);
+
+            // --- Blocky Soil Ground ---
+            const soilBlockColor = mc_colors.soil_brown;
+            const soilGroundGroup = new THREE.Group();
+            const groundWidthBlocks = Math.floor((GRID_WIDTH * 2.5) / CUBE_SIZE);
+            const groundDepthBlocks = Math.floor((GRID_DEPTH * 4.0) / CUBE_SIZE);
+            const soilBlockYPosition = -1; // Top surface of these blocks will be at Y=0.
+
+            for (let i = -Math.floor(groundWidthBlocks / 2); i <= Math.floor(groundWidthBlocks / 2); i++) {
+                for (let j = -Math.floor(groundDepthBlocks / 2); j <= Math.floor(groundDepthBlocks / 2); j++) {
+                    const block = createBlock(soilBlockColor, i, soilBlockYPosition, j);
+                    block.castShadow = false; 
+                    block.receiveShadow = true;
+                    soilGroundGroup.add(block);
+                }
+            }
+            scene.add(soilGroundGroup);
 
 
             // Renderer setup
@@ -277,79 +293,30 @@
                 const x_position = weekIndex * (CUBE_SIZE + CUBE_SPACING);
                 const z_position = dayOfWeek * (CUBE_SIZE + CUBE_SPACING);
                 
-                // --- Start of New Single Block Logic ---
-                if (count === 0) {
-                    // For count === 0, do nothing: no modelGroup is created or added.
+                // --- Start of Stacked Wooden Plank Logic ---
+                if (contrib.count === 0) {
+                    // Do nothing for count === 0
                     return; 
                 }
 
                 let modelGroup = new THREE.Group();
-                // Position the group so the base of the block (when added at local y=0) rests on Y=0 plane
-                modelGroup.position.set(x_position, 0, z_position); 
+                modelGroup.position.set(x_position, 0, z_position); // Base of the stack at Y=0 of the scene
 
-                let modelType = '';
-                let blockColor = null;
-                let emissiveColor = null; // Only for lava
-
-                if (count === 1) {
-                    modelType = 'grass_block';
-                    blockColor = mc_colors.grass_block_green;
-                    const block = createBlock(blockColor, 0, 0, 0); // Create block at group's local origin (y=0 layer)
-                    modelGroup.add(block);
-                } else if (count === 2) {
-                    modelType = 'sand_block';
-                    blockColor = mc_colors.sand_block_beige;
-                    const block = createBlock(blockColor, 0, 0, 0);
-                    modelGroup.add(block);
-                } else if (count === 3) {
-                    modelType = 'stone_block';
-                    blockColor = mc_colors.lotte_medium_grey; // Using lotte_medium_grey as stone
-                    const block = createBlock(blockColor, 0, 0, 0);
-                    modelGroup.add(block);
-                } else if (count >= 4) {
-                    modelType = 'lava_block';
-                    blockColor = mc_colors.lava_block_orange;
-                    emissiveColor = mc_colors.lava_block_emissive;
-                    
-                    const lavaMaterial = new THREE.MeshStandardMaterial({ 
-                        color: blockColor, 
-                        emissive: emissiveColor,
-                        emissiveIntensity: 1.0, // Added emissiveIntensity
-                        roughness: 0.7, 
-                        metalness: 0.1 
-                    });
-                    const blockGeometry = new THREE.BoxGeometry(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
-                    const block = new THREE.Mesh(blockGeometry, lavaMaterial);
-                    // Position block's center at (0, CUBE_SIZE/2, 0) within the modelGroup
-                    // createBlock(color, 0,0,0) would achieve this for standard blocks.
-                    block.position.set(0, CUBE_SIZE / 2, 0); 
-                    block.castShadow = true; 
-                    block.receiveShadow = true;
+                for (let y_layer = 0; y_layer < contrib.count; y_layer++) {
+                    // createBlock(color, local_x_idx, local_y_idx, local_z_idx)
+                    // local_y_idx is the layer index. createBlock positions bottom face at local_y_idx * CUBE_SIZE.
+                    const block = createBlock(mc_colors.wood_plank, 0, y_layer, 0);
                     modelGroup.add(block);
                 }
                 
-                // Set userData only if a model was created (count > 0)
-                if (modelType === 'lava_block') {
-                    modelGroup.userData = {
-                        date: date.toISOString().split('T')[0],
-                        count: count,
-                        type: modelType,
-                        isContributionObject: true,
-                        originalColor: blockColor ? blockColor.clone() : null,
-                        originalEmissiveColor: emissiveColor.clone(), // Store original emissive for lava
-                        originalEmissiveIntensity: 1.0, // Assuming base intensity is 1.0
-                        highlightableMeshes: modelGroup.children.slice() 
-                    };
-                } else {
-                    modelGroup.userData = {
-                        date: date.toISOString().split('T')[0],
-                        count: count,
-                        type: modelType,
-                        isContributionObject: true,
-                        originalColor: blockColor ? blockColor.clone() : null,
-                        highlightableMeshes: modelGroup.children.slice() 
-                    };
-                }
+                modelGroup.userData = {
+                    date: contrib.dateObj.toISOString().split('T')[0],
+                    count: contrib.count,
+                    type: 'wood_stack', // New type
+                    isContributionObject: true,
+                    originalColor: mc_colors.wood_plank.clone(), // Base color of the blocks
+                    highlightableMeshes: modelGroup.children.slice() // All blocks in this stack
+                };
                 contributionCubesGroup.add(modelGroup);
             });
             
