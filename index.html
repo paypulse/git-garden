@@ -85,7 +85,7 @@
             const block = new THREE.Mesh(geometry, material);
             block.position.set(x * CUBE_SIZE, y * CUBE_SIZE + CUBE_SIZE / 2, z * CUBE_SIZE); // Center origin of block at its base
            // block.castShadow = true;
-            block.receiveShadow = true;
+          //  block.receiveShadow = true;
             return block;
         }
 
@@ -205,7 +205,7 @@
                     //const block = createBlock(roadBlockColor, i, yPositionForRoadBlocks, j);
                     // Road blocks should not cast shadows themselves but should receive them.
                     // block.castShadow = false; 
-                    block.receiveShadow = true;
+                   // block.receiveShadow = true;
                     roadGroup.add(block);
                 }
             }
