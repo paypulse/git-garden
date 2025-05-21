@@ -37,13 +37,62 @@
         const WEEKS_IN_YEAR = 53; // Standard GitHub contribution graph width
 
         const HIGHLIGHT_COLOR = 0xffdc73; // Softer yellow for highlighting
-        const SCENE_BACKGROUND_COLOR = 0x282c34; // Darker, slightly bluish background
-        const FOG_COLOR = SCENE_BACKGROUND_COLOR;
+        // const SCENE_BACKGROUND_COLOR = 0x282c34; // Darker, slightly bluish background - REMOVED for dynamic sky
+        // const FOG_COLOR = SCENE_BACKGROUND_COLOR; - REMOVED for dynamic sky
         const FOG_NEAR_FACTOR = 2.5; // Fog starts further out based on grid size
         const FOG_FAR_FACTOR = 4.5;  // Fog ends further out
 
+        // --- Pre-calculate Grid Dimensions (used in lighting setup) ---
+        const GRID_WIDTH = WEEKS_IN_YEAR * (CUBE_SIZE + CUBE_SPACING);
+        const GRID_DEPTH = DAYS_IN_WEEK * (CUBE_SIZE + CUBE_SPACING);
+
+        // --- Sky Cycle Variables with Lighting ---
+        const dawnColors = {
+            background: new THREE.Color(0xffa07a), // Light Salmon
+            fog: new THREE.Color(0xffd8b1),         // Wheat
+            lighting: {
+                hemisphereLight: { skyColor: new THREE.Color(0xffa07a), groundColor: new THREE.Color(0x444444), intensity: 0.7 },
+                ambientLight: { color: new THREE.Color(0xffa07a), intensity: 0.35 },
+                directionalLight: { color: new THREE.Color(0xffccaa), intensity: 0.7, position: new THREE.Vector3(-GRID_WIDTH * 0.3, 60, GRID_DEPTH * 0.7) } 
+            }
+        };
+        const dayColors = {
+            background: new THREE.Color(0x87ceeb), // Sky Blue
+            fog: new THREE.Color(0xb0e0e6),         // Powder Blue
+            lighting: {
+                hemisphereLight: { skyColor: new THREE.Color(0x87ceeb), groundColor: new THREE.Color(0x666666), intensity: 0.9 },
+                ambientLight: { color: new THREE.Color(0xffffff), intensity: 0.5 },
+                directionalLight: { color: new THREE.Color(0xffffff), intensity: 1.0, position: new THREE.Vector3(GRID_WIDTH * 0.1, 80, GRID_DEPTH * 0.5) } 
+            }
+        };
+        const duskColors = {
+            background: new THREE.Color(0xff7f50), // Coral
+            fog: new THREE.Color(0xffb347),         // Dark Salmon (using a more orangey fog)
+            lighting: {
+                hemisphereLight: { skyColor: new THREE.Color(0xff7f50), groundColor: new THREE.Color(0x444444), intensity: 0.6 },
+                ambientLight: { color: new THREE.Color(0xff7f50), intensity: 0.3 },
+                directionalLight: { color: new THREE.Color(0xffaa88), intensity: 0.8, position: new THREE.Vector3(GRID_WIDTH * 0.5, 60, GRID_DEPTH * 0.7) } 
+            }
+        };
+        const nightColors = {
+            background: new THREE.Color(0x000033), // Dark Navy
+            fog: new THREE.Color(0x000020),         // Very Dark Blue
+            lighting: {
+                hemisphereLight: { skyColor: new THREE.Color(0x000033), groundColor: new THREE.Color(0x101010), intensity: 0.25 },
+                ambientLight: { color: new THREE.Color(0x404050), intensity: 0.15 }, // Moonlight ambient
+                directionalLight: { color: new THREE.Color(0x505070), intensity: 0.2, position: new THREE.Vector3(GRID_WIDTH * 0.2, 70, GRID_DEPTH * 1.0) } // Moonlight
+            }
+        };
+        const skyCycle = [dawnColors, dayColors, duskColors, nightColors];
+        let currentSkyColorIndex = 0;
+        let nextSkyColorIndex = 1;
+        let skyTransitionProgress = 0;
+        const skyTransitionSpeed = 0.0005; // Adjust for speed of transition
+        // const skyPhaseDuration = 1; // This will be normalized by skyTransitionProgress >= 1.0
+
         // --- Global Three.js Variables ---
         let scene, camera, renderer, controls;
+        let hemisphereLight, ambientLight, directionalLight; // Made global for updating in animate()
         let raycaster, mouse;
         let contributionCubesGroup;
         let intersectedCube = null;
@@ -71,10 +120,16 @@
             
             // Scene setup
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(SCENE_BACKGROUND_COLOR);
+            // scene.background = new THREE.Color(SCENE_BACKGROUND_COLOR); // REMOVED for dynamic sky
+            scene.background = new THREE.Color().copy(skyCycle[0].background); // Initial background
+
             const gridWidth = WEEKS_IN_YEAR * (CUBE_SIZE + CUBE_SPACING);
             const gridDepth = DAYS_IN_WEEK * (CUBE_SIZE + CUBE_SPACING);
-            scene.fog = new THREE.Fog(FOG_COLOR, Math.max(gridWidth, gridDepth) * FOG_NEAR_FACTOR, Math.max(gridWidth, gridDepth) * FOG_FAR_FACTOR);
+            // scene.fog = new THREE.Fog(FOG_COLOR, Math.max(gridWidth, gridDepth) * FOG_NEAR_FACTOR, Math.max(gridWidth, gridDepth) * FOG_FAR_FACTOR);
+            // Initial fog, color will be updated dynamically
+            scene.fog = new THREE.Fog(skyCycle[0].fog.getHex(), Math.max(gridWidth, gridDepth) * FOG_NEAR_FACTOR, Math.max(gridWidth, gridDepth) * FOG_FAR_FACTOR);
+            scene.fog.color.copy(skyCycle[0].fog);
+
 
             contributionCubesGroup = new THREE.Group();
             scene.add(contributionCubesGroup);
@@ -83,35 +138,47 @@
             camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 3000); // Adjusted FOV
             // Initial camera position will be refined after graph generation
 
-            // Lighting setup
-            // HemisphereLight for soft ambient light from sky and ground
-            const hemisphereLight = new THREE.HemisphereLight(0x7f8c8d, 0x34495e, 0.8); // Sky color, ground color, intensity
+            // Lighting setup - Initialized with the first sky phase
+            const initialLighting = skyCycle[0].lighting;
+
+            // HemisphereLight (now global)
+            hemisphereLight = new THREE.HemisphereLight(
+                initialLighting.hemisphereLight.skyColor,
+                initialLighting.hemisphereLight.groundColor,
+                initialLighting.hemisphereLight.intensity
+            );
             scene.add(hemisphereLight);
 
-            // Ambient light for overall base illumination
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); // Reduced intensity as Hemisphere is present
+            // Ambient light (now global)
+            ambientLight = new THREE.AmbientLight(
+                initialLighting.ambientLight.color,
+                initialLighting.ambientLight.intensity
+            );
             scene.add(ambientLight);
 
-            // Directional light for shadows and highlights
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9); // Slightly increased intensity
-            directionalLight.position.set(gridWidth * 0.6, 80, gridDepth * 1.5); // Position relative to grid
+            // Directional light (now global)
+            directionalLight = new THREE.DirectionalLight(
+                initialLighting.directionalLight.color,
+                initialLighting.directionalLight.intensity
+            );
+            directionalLight.position.copy(initialLighting.directionalLight.position);
             directionalLight.castShadow = true;
-            directionalLight.shadow.mapSize.width = 4096; // Increased shadow map resolution
+            directionalLight.shadow.mapSize.width = 4096;
             directionalLight.shadow.mapSize.height = 4096;
             directionalLight.shadow.camera.near = 10;
-            directionalLight.shadow.camera.far = 200;
-            // Adjust shadow camera frustum to tightly contain the grid for better shadow quality
-            directionalLight.shadow.camera.left = -gridWidth / 1.8;
-            directionalLight.shadow.camera.right = gridWidth / 1.8;
-            directionalLight.shadow.camera.top = gridDepth / 1.5;
-            directionalLight.shadow.camera.bottom = -gridDepth / 1.5;
-            directionalLight.shadow.bias = -0.0005; // Helps with shadow acne
+            directionalLight.shadow.camera.far = 200; 
+            // Shadow camera frustum uses GRID_WIDTH and GRID_DEPTH (now global)
+            directionalLight.shadow.camera.left = -GRID_WIDTH / 1.8;
+            directionalLight.shadow.camera.right = GRID_WIDTH / 1.8;
+            directionalLight.shadow.camera.top = GRID_DEPTH / 1.5;
+            directionalLight.shadow.camera.bottom = -GRID_DEPTH / 1.5;
+            directionalLight.shadow.bias = -0.0005;
             scene.add(directionalLight);
-            // const shadowHelper = new THREE.CameraHelper(directionalLight.shadow.camera); // For debugging shadows
+            // const shadowHelper = new THREE.CameraHelper(directionalLight.shadow.camera);
             // scene.add(shadowHelper);
             
             // Ground plane
-            const planeGeometry = new THREE.PlaneGeometry(gridWidth * 1.5, gridDepth * 3); // Larger plane
+            const planeGeometry = new THREE.PlaneGeometry(GRID_WIDTH * 1.5, GRID_DEPTH * 3); // Larger plane
             const planeMaterial = new THREE.MeshStandardMaterial({ color: 0x202020, roughness: 0.9, metalness: 0.1 });
             const plane = new THREE.Mesh(planeGeometry, planeMaterial);
             plane.rotation.x = -Math.PI / 2;
@@ -183,27 +250,49 @@
 
                 const x_position = weekIndex * (CUBE_SIZE + CUBE_SPACING);
                 const z_position = dayOfWeek * (CUBE_SIZE + CUBE_SPACING);
-                const cubeHeight = mapCountToHeight(count);
-                const y_position = cubeHeight / 2;
+                const stemHeight = mapCountToHeight(count);
+                const bloomColor = mapCountToColor(count);
 
-                const geometry = new THREE.BoxGeometry(CUBE_SIZE, cubeHeight, CUBE_SIZE);
-                const originalColor = mapCountToColor(count);
-                const material = new THREE.MeshStandardMaterial({ 
-                    color: originalColor,
-                    roughness: 0.75, // Adjusted roughness
-                    metalness: 0.05  // Adjusted metalness
+                const flowerGroup = new THREE.Group();
+                flowerGroup.position.set(x_position, 0, z_position);
+
+                // Stem
+                const stemRadius = CUBE_SIZE * 0.1; // Thin stem
+                const stemGeometry = new THREE.CylinderGeometry(stemRadius, stemRadius, stemHeight, 8);
+                const stemMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x556B2F, // Dark Olive Green
+                    roughness: 0.8,
+                    metalness: 0.1 
                 });
-                const cube = new THREE.Mesh(geometry, material);
-                cube.position.set(x_position, y_position, z_position);
-                cube.castShadow = true;
-                cube.receiveShadow = true;
-                cube.userData = { 
+                const stem = new THREE.Mesh(stemGeometry, stemMaterial);
+                stem.position.y = stemHeight / 2; // Position stem relative to flowerGroup origin
+                stem.castShadow = true;
+                stem.receiveShadow = true;
+                flowerGroup.add(stem);
+
+                // Bloom
+                const bloomRadius = Math.max(CUBE_SIZE * 0.2, 0.15 + Math.log1p(count) * 0.08); // Ensure min size, scale with count
+                const bloomGeometry = new THREE.SphereGeometry(bloomRadius, 16, 16);
+                const bloomMaterial = new THREE.MeshStandardMaterial({
+                    color: bloomColor,
+                    roughness: 0.6,
+                    metalness: 0.05
+                });
+                const bloom = new THREE.Mesh(bloomGeometry, bloomMaterial);
+                bloom.position.y = stemHeight + bloomRadius * 0.8; // Position bloom on top of stem, slightly overlapping
+                bloom.castShadow = true;
+                bloom.receiveShadow = true;
+                flowerGroup.add(bloom);
+                
+                flowerGroup.userData = {
                     date: date.toISOString().split('T')[0],
                     count: count,
-                    originalColor: new THREE.Color(originalColor),
-                    isContributionCube: true
+                    originalColor: new THREE.Color(bloomColor), // Store bloom's color for highlight
+                    isContributionObject: true, // Renamed from isContributionCube
+                    // Keep a reference to the bloom for easy color change on hover
+                    bloomMesh: bloom 
                 };
-                contributionCubesGroup.add(cube);
+                contributionCubesGroup.add(flowerGroup);
             });
             
             // --- Final Camera and Controls Target Adjustment ---
@@ -226,33 +315,50 @@
             mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
 
             raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(contributionCubesGroup.children, false); // Non-recursive
+            const intersects = raycaster.intersectObjects(contributionCubesGroup.children, true); // Recursive to get stem/bloom
 
             if (intersects.length > 0) {
-                const firstIntersected = intersects[0].object;
-                if (firstIntersected.userData.isContributionCube) {
-                    if (intersectedCube !== firstIntersected) {
-                        if (intersectedCube) {
-                            intersectedCube.material.color.set(intersectedCube.userData.originalColor);
+                let intersectedObject = intersects[0].object;
+                let contributionGroup = null;
+
+                // Traverse up to find the main flower group (if a part of it was intersected)
+                while (intersectedObject) {
+                    if (intersectedObject.userData && intersectedObject.userData.isContributionObject) {
+                        contributionGroup = intersectedObject;
+                        break;
+                    }
+                    if (!intersectedObject.parent) break; // Stop if no parent
+                    intersectedObject = intersectedObject.parent;
+                }
+
+                if (contributionGroup) {
+                    if (intersectedCube !== contributionGroup) { // intersectedCube now refers to the group
+                        if (intersectedCube && intersectedCube.userData.bloomMesh) {
+                             // Reset previous bloom's color
+                            intersectedCube.userData.bloomMesh.material.color.set(intersectedCube.userData.originalColor);
                         }
-                        intersectedCube = firstIntersected;
-                        intersectedCube.material.color.set(HIGHLIGHT_COLOR);
+                        intersectedCube = contributionGroup;
+                        if (intersectedCube.userData.bloomMesh) {
+                            // Highlight current bloom
+                            intersectedCube.userData.bloomMesh.material.color.set(HIGHLIGHT_COLOR);
+                        }
                         tooltipElement.style.display = 'block';
                         tooltipElement.innerHTML = `Date: ${intersectedCube.userData.date}<br>Contributions: ${intersectedCube.userData.count}`;
                     }
-                    tooltipElement.style.left = (event.clientX + 10) + 'px'; // Adjusted offset
-                    tooltipElement.style.top = (event.clientY - 25) + 'px'; // Adjusted offset
+                    tooltipElement.style.left = (event.clientX + 10) + 'px';
+                    tooltipElement.style.top = (event.clientY - 25) + 'px';
                 } else {
-                    hideTooltipAndResetCube();
+                    hideTooltipAndResetFlower();
                 }
             } else {
-                hideTooltipAndResetCube();
+                hideTooltipAndResetFlower();
             }
         }
         
-        function hideTooltipAndResetCube() {
-            if (intersectedCube) {
-                intersectedCube.material.color.set(intersectedCube.userData.originalColor);
+        function hideTooltipAndResetFlower() { // Renamed from hideTooltipAndResetCube
+            if (intersectedCube && intersectedCube.userData.bloomMesh) {
+                 // Reset bloom's color
+                intersectedCube.userData.bloomMesh.material.color.set(intersectedCube.userData.originalColor);
                 intersectedCube = null;
             }
             tooltipElement.style.display = 'none';
@@ -267,6 +373,54 @@
         // --- Animation Loop ---
         function animate() {
             requestAnimationFrame(animate);
+
+            // Update sky
+            skyTransitionProgress += skyTransitionSpeed;
+            if (skyTransitionProgress >= 1.0) {
+                skyTransitionProgress = 0;
+                currentSkyColorIndex = (currentSkyColorIndex + 1) % skyCycle.length;
+                nextSkyColorIndex = (nextSkyColorIndex + 1) % skyCycle.length;
+            }
+            const currentColorSet = skyCycle[currentSkyColorIndex];
+            const nextColorSet = skyCycle[nextSkyColorIndex];
+            
+            if (scene.background.isColor) { // Ensure scene.background is a THREE.Color object
+                scene.background.lerpColors(currentColorSet.background, nextColorSet.background, skyTransitionProgress);
+            } else { // Fallback if it's not (e.g. null or texture) - though we set it to a color in init
+                scene.background = new THREE.Color().lerpColors(currentColorSet.background, nextColorSet.background, skyTransitionProgress);
+            }
+            
+            if (scene.fog && scene.fog.color.isColor) {
+                scene.fog.color.lerpColors(currentColorSet.fog, nextColorSet.fog, skyTransitionProgress);
+            }
+
+            // Update lighting
+            const currentLighting = currentColorSet.lighting;
+            const nextLighting = nextColorSet.lighting;
+
+            // HemisphereLight
+            if (hemisphereLight) {
+                hemisphereLight.color.lerpColors(currentLighting.hemisphereLight.skyColor, nextLighting.hemisphereLight.skyColor, skyTransitionProgress);
+                hemisphereLight.groundColor.lerpColors(currentLighting.hemisphereLight.groundColor, nextLighting.hemisphereLight.groundColor, skyTransitionProgress);
+                hemisphereLight.intensity = THREE.MathUtils.lerp(currentLighting.hemisphereLight.intensity, nextLighting.hemisphereLight.intensity, skyTransitionProgress);
+            }
+
+            // AmbientLight
+            if (ambientLight) {
+                ambientLight.color.lerpColors(currentLighting.ambientLight.color, nextLighting.ambientLight.color, skyTransitionProgress);
+                ambientLight.intensity = THREE.MathUtils.lerp(currentLighting.ambientLight.intensity, nextLighting.ambientLight.intensity, skyTransitionProgress);
+            }
+
+            // DirectionalLight
+            if (directionalLight) {
+                directionalLight.color.lerpColors(currentLighting.directionalLight.color, nextLighting.directionalLight.color, skyTransitionProgress);
+                directionalLight.intensity = THREE.MathUtils.lerp(currentLighting.directionalLight.intensity, nextLighting.directionalLight.intensity, skyTransitionProgress);
+                directionalLight.position.lerpVectors(currentLighting.directionalLight.position, nextLighting.directionalLight.position, skyTransitionProgress);
+                // If directionalLight.target changes, or if you want it to always point to scene center:
+                // directionalLight.target.position.set(controls.target.x, controls.target.y, controls.target.z); // Assuming controls.target is the scene center
+                // scene.add(directionalLight.target); // if target is a new object
+            }
+
             controls.update(); // Only if enableDamping or autoRotate is true
             renderer.render(scene, camera);
         }
