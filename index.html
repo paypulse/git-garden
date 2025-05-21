@@ -50,37 +50,37 @@
         const dawnColors = {
             background: new THREE.Color(0xffa07a), // Light Salmon
             fog: new THREE.Color(0xffd8b1),         // Wheat
-            lighting: {
-                hemisphereLight: { skyColor: new THREE.Color(0xffa07a), groundColor: new THREE.Color(0x504030), intensity: 0.75 }, // Slightly warmer ground, slightly more intensity
-                ambientLight: { color: new THREE.Color(0xffa07a), intensity: 0.4 }, // Increased ambient intensity
-                directionalLight: { color: new THREE.Color(0xffddbb), intensity: 0.75, position: new THREE.Vector3(-GRID_WIDTH * 0.3, 60, GRID_DEPTH * 0.7) } // Slightly warmer, slightly more intense
+            lighting: { // Tuned for Tulips
+                hemisphereLight: { skyColor: new THREE.Color(0xffa07a), groundColor: new THREE.Color(0x504030), intensity: 0.8 }, 
+                ambientLight: { color: new THREE.Color(0xffa07a), intensity: 0.45 }, // Boosted ambient for overall visibility
+                directionalLight: { color: new THREE.Color(0xffebd0), intensity: 0.7, position: new THREE.Vector3(-GRID_WIDTH * 0.3, 60, GRID_DEPTH * 0.7) } // Less saturated warm light
             }
         };
         const dayColors = {
             background: new THREE.Color(0x87ceeb), // Sky Blue
             fog: new THREE.Color(0xb0e0e6),         // Powder Blue
-            lighting: {
-                hemisphereLight: { skyColor: new THREE.Color(0x87ceeb), groundColor: new THREE.Color(0x777777), intensity: 0.9 }, // Ground slightly lighter
-                ambientLight: { color: new THREE.Color(0xfffffa), intensity: 0.45 }, // Slightly less intense, very light yellow/white
-                directionalLight: { color: new THREE.Color(0xffffff), intensity: 0.9, position: new THREE.Vector3(GRID_WIDTH * 0.1, 80, GRID_DEPTH * 0.5) } // Reduced intensity
+            lighting: { // Tuned for Tulips
+                hemisphereLight: { skyColor: new THREE.Color(0x87ceeb), groundColor: new THREE.Color(0x888888), intensity: 0.9 }, // Slightly brighter ground
+                ambientLight: { color: new THREE.Color(0xfffff0), intensity: 0.4 }, // Pale yellow ambient, slightly reduced
+                directionalLight: { color: new THREE.Color(0xfff5e1), intensity: 0.8, position: new THREE.Vector3(GRID_WIDTH * 0.1, 80, GRID_DEPTH * 0.5) } // Softer, slightly warmer white directional
             }
         };
         const duskColors = {
             background: new THREE.Color(0xff7f50), // Coral
             fog: new THREE.Color(0xffb347),         // Dark Salmon (using a more orangey fog)
-            lighting: {
-                hemisphereLight: { skyColor: new THREE.Color(0xff7f50), groundColor: new THREE.Color(0x504030), intensity: 0.7 }, // Warmer ground
-                ambientLight: { color: new THREE.Color(0xff7f50), intensity: 0.35 }, // Slightly more ambient
-                directionalLight: { color: new THREE.Color(0xffb899), intensity: 0.85, position: new THREE.Vector3(GRID_WIDTH * 0.5, 60, GRID_DEPTH * 0.7) } // Slightly more intense, warmer
+            lighting: { // Tuned for Tulips
+                hemisphereLight: { skyColor: new THREE.Color(0xff7f50), groundColor: new THREE.Color(0x504030), intensity: 0.75 },
+                ambientLight: { color: new THREE.Color(0xff7f50), intensity: 0.4 }, // Boosted ambient
+                directionalLight: { color: new THREE.Color(0xffc8a0), intensity: 0.8, position: new THREE.Vector3(GRID_WIDTH * 0.5, 60, GRID_DEPTH * 0.7) } // Golden hour, less saturated orange
             }
         };
         const nightColors = {
             background: new THREE.Color(0x000033), // Dark Navy
             fog: new THREE.Color(0x000020),         // Very Dark Blue
-            lighting: {
-                hemisphereLight: { skyColor: new THREE.Color(0x202040), groundColor: new THREE.Color(0x080810), intensity: 0.35 }, // Slightly brighter sky/ground, more distinct
-                ambientLight: { color: new THREE.Color(0x303040), intensity: 0.2 }, // Slightly more blueish ambient
-                directionalLight: { color: new THREE.Color(0x7070a0), intensity: 0.35, position: new THREE.Vector3(GRID_WIDTH * 0.2, 70, GRID_DEPTH * 1.0) } // Cooler, more intense moonlight
+            lighting: { // Tuned for Tulips
+                hemisphereLight: { skyColor: new THREE.Color(0x252545), groundColor: new THREE.Color(0x101018), intensity: 0.4 }, // Slightly more intensity, subtle warmth in ground
+                ambientLight: { color: new THREE.Color(0x454555), intensity: 0.25 }, // More neutral cool ambient, slightly increased
+                directionalLight: { color: new THREE.Color(0x8080aa), intensity: 0.4, position: new THREE.Vector3(GRID_WIDTH * 0.2, 70, GRID_DEPTH * 1.0) } // Whiter moonlight, slightly more intensity
             }
         };
         const skyCycle = [dawnColors, dayColors, duskColors, nightColors];
@@ -89,6 +89,9 @@
         let skyTransitionProgress = 0;
         const skyTransitionSpeed = 0.0005; // Adjust for speed of transition
         // const skyPhaseDuration = 1; // This will be normalized by skyTransitionProgress >= 1.0
+
+        // --- Tulip Colors ---
+        const tulipColors = [new THREE.Color(0xff0000), /* Red */ new THREE.Color(0xffff00), /* Yellow */ new THREE.Color(0xffc0cb) /* Pink */];
 
         // --- Global Three.js Variables ---
         let scene, camera, renderer, controls;
@@ -250,101 +253,136 @@
 
                 const x_position = weekIndex * (CUBE_SIZE + CUBE_SPACING);
                 const z_position = dayOfWeek * (CUBE_SIZE + CUBE_SPACING);
-                const stemHeight = mapCountToHeight(count);
-                // const bloomColor = mapCountToColor(count); // No longer used for sunflower parts
-
-                const flowerGroup = new THREE.Group();
-                flowerGroup.position.set(x_position, 0, z_position);
-
-                // Stem
-                const stemRadius = CUBE_SIZE * 0.07; // Slightly thinner stem
-                const stemGeometry = new THREE.CylinderGeometry(stemRadius, stemRadius, stemHeight, 8);
-                const stemMaterial = new THREE.MeshStandardMaterial({ 
-                    color: 0x008000, // Green
-                    roughness: 0.8,
-                    metalness: 0.1 
-                });
-                const stem = new THREE.Mesh(stemGeometry, stemMaterial);
-                stem.position.y = stemHeight / 2;
-                stem.castShadow = true;
-                stem.receiveShadow = true;
-                flowerGroup.add(stem);
-
-                // Sunflower Head
-                const sunflowerHeadGroup = new THREE.Group();
-                const headScale = 0.8 + Math.log1p(count) * 0.12; // Scale factor for the head based on count
-                sunflowerHeadGroup.scale.set(headScale, headScale, headScale);
-                sunflowerHeadGroup.position.y = stemHeight; // Position head at the top of the stem
-                flowerGroup.add(sunflowerHeadGroup);
-
-                // Petals Disc
-                const petalColor = 0xFFD700; // Bright yellow
-                const petalDiscRadius = CUBE_SIZE * 0.5;
-                const petalDiscHeight = CUBE_SIZE * 0.05;
-                const petalDiscGeometry = new THREE.CylinderGeometry(petalDiscRadius, petalDiscRadius, petalDiscHeight, 32);
-                const petalDiscMaterial = new THREE.MeshStandardMaterial({ 
-                    color: petalColor,
-                    roughness: 0.7,
-                    metalness: 0.05
-                });
-                const petalsDisc = new THREE.Mesh(petalDiscGeometry, petalDiscMaterial);
-                petalsDisc.rotation.x = Math.PI / 2; // Rotate to be flat
-                petalsDisc.castShadow = true;
-                petalsDisc.receiveShadow = true;
-                sunflowerHeadGroup.add(petalsDisc);
-
-                // Center Disc
-                const centerDiscRadius = petalDiscRadius * 0.5;
-                const centerDiscHeight = petalDiscHeight * 1.5; // Slightly thicker than petals
-                const centerDiscGeometry = new THREE.CylinderGeometry(centerDiscRadius, centerDiscRadius, centerDiscHeight, 24);
-                const centerDiscMaterial = new THREE.MeshStandardMaterial({ 
-                    color: 0x583A08, // Dark brown
-                    roughness: 0.6,
-                    metalness: 0.0
-                });
-                const centerDisc = new THREE.Mesh(centerDiscGeometry, centerDiscMaterial);
-                centerDisc.rotation.x = Math.PI / 2; // Rotate to be flat
-                centerDisc.position.z = petalDiscHeight * 0.75; // Position slightly above petals disc
-                centerDisc.castShadow = true;
-                centerDisc.receiveShadow = true;
-                sunflowerHeadGroup.add(centerDisc);
                 
-                // Leaves
-                const leafMaterial = new THREE.MeshStandardMaterial({
-                    color: 0x006400, // Darker green for leaves
-                    roughness: 0.8,
-                    metalness: 0.1
-                });
-                const numLeaves = count > 0 ? (count % 2 === 0 ? 2 : 1) : 0; // 1 or 2 leaves if count > 0
-                
-                for (let i = 0; i < numLeaves; i++) {
-                    const leafGeometry = new THREE.SphereGeometry(CUBE_SIZE * 0.2 * headScale, 8, 6); // Scaled with head
-                    leafGeometry.scale(1, 0.3, 0.7); // Flatten and elongate
-                    const leaf = new THREE.Mesh(leafGeometry, leafMaterial);
-                    leaf.castShadow = true;
-                    leaf.receiveShadow = true;
+                let objectGroup = new THREE.Group();
+                objectGroup.position.set(x_position, 0, z_position);
+
+                if (count === 0) {
+                    // Bare Ground
+                    const groundRadius = CUBE_SIZE * 0.3;
+                    const groundGeometry = new THREE.CylinderGeometry(groundRadius, groundRadius, 0.05, 16);
+                    const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x654321, roughness: 0.9, metalness: 0.0 });
+                    const groundDisc = new THREE.Mesh(groundGeometry, groundMaterial);
+                    groundDisc.position.y = -0.15 + 0.025; // Slightly above plane, accounting for its own height
+                    groundDisc.castShadow = false;
+                    groundDisc.receiveShadow = true;
+                    objectGroup.add(groundDisc);
+                    objectGroup.userData = {
+                        date: date.toISOString().split('T')[0],
+                        count: count,
+                        isContributionObject: true,
+                        isBareGround: true,
+                        originalColor: new THREE.Color(0x654321), // Store its own color
+                        bloomMesh: groundDisc // Can be itself for potential minor highlight
+                    };
+                } else if (count === 1) {
+                    // Sprout
+                    const sproutMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00, roughness: 0.7, metalness: 0.1 });
+                    const leafGeometry = new THREE.SphereGeometry(CUBE_SIZE * 0.15, 6, 4);
+                    leafGeometry.scale(1, 1.8, 0.5); // Elongate and flatten
+
+                    const leaf1 = new THREE.Mesh(leafGeometry, sproutMaterial);
+                    leaf1.position.set(0, CUBE_SIZE * 0.1, 0);
+                    leaf1.rotation.z = Math.PI / 6;
+                    leaf1.rotation.y = Math.PI / 4;
+                    leaf1.castShadow = true;
+                    leaf1.receiveShadow = true;
+                    objectGroup.add(leaf1);
+
+                    const leaf2 = new THREE.Mesh(leafGeometry, sproutMaterial);
+                    leaf2.position.set(0, CUBE_SIZE * 0.12, 0); // Slightly different height
+                    leaf2.rotation.z = -Math.PI / 6;
+                    leaf2.rotation.y = -Math.PI / 4;
+                    leaf2.castShadow = true;
+                    leaf2.receiveShadow = true;
+                    objectGroup.add(leaf2);
                     
-                    const leafAngle = (i === 0) ? Math.PI / 4 : -Math.PI / 3; // Angle for leaf
-                    const leafHeight = stemHeight * (0.3 + Math.random() * 0.3); // Random height on stem
+                    objectGroup.userData = {
+                        date: date.toISOString().split('T')[0],
+                        count: count,
+                        isContributionObject: true,
+                        isSprout: true,
+                        originalColor: new THREE.Color(0x00ff00),
+                        bloomMesh: leaf1 // Highlight one of the leaves
+                    };
+                } else { // count > 1 (Tulip)
+                    const stemHeight = mapCountToHeight(count); // Ensure this is appropriate for tulips
+                    const stemRadius = CUBE_SIZE * 0.05;
+
+                    // Stem
+                    const stemMaterial = new THREE.MeshStandardMaterial({ color: 0x008000, roughness: 0.7, metalness: 0.1 });
+                    const stemGeometry = new THREE.CylinderGeometry(stemRadius, stemRadius, stemHeight, 8);
+                    const stem = new THREE.Mesh(stemGeometry, stemMaterial);
+                    stem.position.y = stemHeight / 2;
+                    stem.castShadow = true;
+                    stem.receiveShadow = true;
+                    objectGroup.add(stem);
+
+                    // Tulip Leaves
+                    const tulipLeafMaterial = new THREE.MeshStandardMaterial({ color: 0x007000, roughness: 0.6, metalness: 0.1 });
+                    const leafShape = new THREE.Shape();
+                    leafShape.moveTo(0, 0);
+                    leafShape.bezierCurveTo(0.1, 0.3, 0.15, 0.7, 0.05, stemHeight * 0.4); // Broader base, tapers
+                    leafShape.bezierCurveTo(-0.05, 0.7, -0.1, 0.3, 0, 0);
+                    const leafGeometry = new THREE.ShapeGeometry(leafShape);
                     
-                    leaf.position.set(
-                        stemRadius * 2 * Math.cos(leafAngle), 
-                        leafHeight, 
-                        stemRadius * 2 * Math.sin(leafAngle)
-                    );
-                    leaf.rotation.y = -leafAngle + Math.PI / 2;
-                    leaf.rotation.z = Math.PI / 6 * (i === 0 ? 1 : -1); // Tilt
-                    flowerGroup.add(leaf);
+                    const numTulipLeaves = count < 5 ? 1 : 2;
+                    for (let i = 0; i < numTulipLeaves; i++) {
+                        const tulipLeaf = new THREE.Mesh(leafGeometry, tulipLeafMaterial);
+                        tulipLeaf.position.set(stemRadius * (i === 0 ? 1.5 : -1.5), stemHeight * 0.1, 0);
+                        tulipLeaf.rotation.x = Math.PI / 12 * (i === 0 ? 1 : -1);
+                        tulipLeaf.rotation.y = Math.PI / 2 + (i === 0 ? Math.PI / 6 : -Math.PI / 6);
+                        tulipLeaf.rotation.z = Math.PI / 8 * (i === 0 ? -1 : 1);
+                        tulipLeaf.castShadow = true;
+                        tulipLeaf.receiveShadow = true;
+                        objectGroup.add(tulipLeaf);
+                    }
+
+                    // Tulip Bloom
+                    const bloomHeadGroup = new THREE.Group();
+                    const headScale = 0.2 + Math.log1p(count -1) * 0.1; // Scale bloom with count (starting from count=2)
+                    bloomHeadGroup.scale.set(headScale, headScale, headScale);
+                    bloomHeadGroup.position.y = stemHeight;
+                    objectGroup.add(bloomHeadGroup);
+
+                    const petalColor = tulipColors[Math.floor(Math.random() * tulipColors.length)];
+                    const petalMaterial = new THREE.MeshStandardMaterial({ 
+                        color: petalColor, 
+                        roughness: 0.5, 
+                        metalness: 0.2,
+                        side: THREE.DoubleSide // Ensure inside of petals are visible
+                    });
+                    
+                    // Simple petal geometry (elongated sphere part)
+                    const petalShapeGeometry = new THREE.SphereGeometry(CUBE_SIZE * 0.5, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2.5);
+                    petalShapeGeometry.scale(0.6, 1, 0.3); // Elongate and flatten
+                    
+                    const numPetals = 5; // Fixed number of petals for a simpler tulip look
+                    for (let i = 0; i < numPetals; i++) {
+                        const petal = new THREE.Mesh(petalShapeGeometry, petalMaterial);
+                        const angle = (i / numPetals) * Math.PI * 2;
+                        petal.position.set(
+                            Math.cos(angle) * CUBE_SIZE * 0.15, 
+                            CUBE_SIZE * 0.3, // Lift petals to form cup base
+                            Math.sin(angle) * CUBE_SIZE * 0.15
+                        );
+                        petal.rotation.y = -angle + Math.PI / 2; // Orient petal outwards
+                        petal.rotation.x = Math.PI / 4; // Angle upwards
+                        petal.castShadow = true;
+                        petal.receiveShadow = true;
+                        bloomHeadGroup.add(petal);
+                    }
+                    
+                    objectGroup.userData = {
+                        date: date.toISOString().split('T')[0],
+                        count: count,
+                        isContributionObject: true,
+                        isTulip: true,
+                        originalColor: petalColor.clone(),
+                        bloomMesh: bloomHeadGroup // Highlight the whole bloom head
+                    };
                 }
-
-                flowerGroup.userData = {
-                    date: date.toISOString().split('T')[0],
-                    count: count,
-                    originalColor: new THREE.Color(petalColor), 
-                    isContributionObject: true, 
-                    bloomMesh: petalsDisc // Reference to the petal disc for highlighting
-                };
-                contributionCubesGroup.add(flowerGroup);
+                contributionCubesGroup.add(objectGroup);
             });
             
             // --- Final Camera and Controls Target Adjustment ---
@@ -384,15 +422,32 @@
                 }
 
                 if (contributionGroup) {
-                    if (intersectedCube !== contributionGroup) { // intersectedCube now refers to the group
+                    if (intersectedCube !== contributionGroup) { 
                         if (intersectedCube && intersectedCube.userData.bloomMesh) {
-                             // Reset previous bloom's color
-                            intersectedCube.userData.bloomMesh.material.color.set(intersectedCube.userData.originalColor);
+                            if (intersectedCube.userData.isTulip) {
+                                // Reset color for all petals in the bloomMesh group
+                                intersectedCube.userData.bloomMesh.children.forEach(child => {
+                                    if(child.material) child.material.color.set(intersectedCube.userData.originalColor);
+                                });
+                            } else if (intersectedCube.userData.bloomMesh.material) { // For single mesh objects like sprout leaf or ground
+                                intersectedCube.userData.bloomMesh.material.color.set(intersectedCube.userData.originalColor);
+                            }
                         }
                         intersectedCube = contributionGroup;
                         if (intersectedCube.userData.bloomMesh) {
-                            // Highlight current bloom
-                            intersectedCube.userData.bloomMesh.material.color.set(HIGHLIGHT_COLOR);
+                            if (intersectedCube.userData.isTulip) {
+                                intersectedCube.userData.bloomMesh.children.forEach(child => {
+                                     if(child.material) child.material.color.set(HIGHLIGHT_COLOR);
+                                });
+                            } else if (intersectedCube.userData.bloomMesh.material) { // For single mesh objects
+                                if (!intersectedCube.userData.isBareGround) { // Don't highlight bare ground with yellow
+                                   intersectedCube.userData.bloomMesh.material.color.set(HIGHLIGHT_COLOR);
+                                } else {
+                                    // Optionally, slightly lighten bare ground
+                                    const groundHighlightColor = new THREE.Color(0x7a5f3e); // Slightly lighter brown
+                                    intersectedCube.userData.bloomMesh.material.color.set(groundHighlightColor);
+                                }
+                            }
                         }
                         tooltipElement.style.display = 'block';
                         tooltipElement.innerHTML = `Date: ${intersectedCube.userData.date}<br>Contributions: ${intersectedCube.userData.count}`;
@@ -400,17 +455,22 @@
                     tooltipElement.style.left = (event.clientX + 10) + 'px';
                     tooltipElement.style.top = (event.clientY - 25) + 'px';
                 } else {
-                    hideTooltipAndResetFlower();
+                    hideTooltipAndResetObject();
                 }
             } else {
-                hideTooltipAndResetFlower();
+                hideTooltipAndResetObject();
             }
         }
         
-        function hideTooltipAndResetFlower() { // Renamed from hideTooltipAndResetCube
+        function hideTooltipAndResetObject() { // Renamed from hideTooltipAndResetFlower
             if (intersectedCube && intersectedCube.userData.bloomMesh) {
-                 // Reset bloom's color
-                intersectedCube.userData.bloomMesh.material.color.set(intersectedCube.userData.originalColor);
+                if (intersectedCube.userData.isTulip) {
+                    intersectedCube.userData.bloomMesh.children.forEach(child => {
+                        if(child.material) child.material.color.set(intersectedCube.userData.originalColor);
+                    });
+                } else if (intersectedCube.userData.bloomMesh.material) { // For single mesh objects
+                     intersectedCube.userData.bloomMesh.material.color.set(intersectedCube.userData.originalColor);
+                }
                 intersectedCube = null;
             }
             tooltipElement.style.display = 'none';
