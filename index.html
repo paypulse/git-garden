@@ -84,8 +84,8 @@
             const material = new THREE.MeshStandardMaterial({ color: color, roughness: 0.65, metalness: 0.15 });
             const block = new THREE.Mesh(geometry, material);
             block.position.set(x * CUBE_SIZE, y * CUBE_SIZE + CUBE_SIZE / 2, z * CUBE_SIZE); // Center origin of block at its base
-            block.castShadow = true;
-            block.receiveShadow = true;
+           // block.castShadow = true;
+          //  block.receiveShadow = true;
             return block;
         }
 
@@ -192,6 +192,7 @@
             // scene.add(plane);
 
             // --- Blocky Road Surface --- REMOVED
+
 
 
             // Renderer setup
