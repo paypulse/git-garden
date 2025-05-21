@@ -95,6 +95,7 @@
         let count3Texture = textureLoader.load('object/count3.png');
         let count4Texture = textureLoader.load('object/count4.png');
         let count5Texture = textureLoader.load('object/count5.png');
+        let cloudTexture = textureLoader.load('object/cloud.png');
 
         // --- Helper Functions ---
         function createCustomBlock(material, x, y, z) { // x, z typically 0 for blocks in a stack
@@ -126,7 +127,7 @@
 
             // --- Minecraft Clouds ---
             const cloudGroup = new THREE.Group();
-            const cloudMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+            const cloudMaterial = new THREE.MeshBasicMaterial({ map: cloudTexture, transparent: true });
             
             function createCloud(blocksData, x, y, z) {
                 const singleCloud = new THREE.Group();
