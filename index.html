@@ -191,7 +191,7 @@
                 for (let j = -Math.floor(roadDepthBlocks / 2); j <= Math.floor(roadDepthBlocks / 2); j++) {
                     // createBlock's y parameter is block layer index.
                     // y=-1 means its center is at -0.5*CUBE_SIZE, so its top surface is at Y=0.
-                    const block = createBlock(roadBlockColor, i, yPositionForRoadBlocks, j);
+                    //const block = createBlock(roadBlockColor, i, yPositionForRoadBlocks, j);
                     // Road blocks should not cast shadows themselves but should receive them.
                     block.castShadow = false; 
                     block.receiveShadow = true;
