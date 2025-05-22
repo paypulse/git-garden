@@ -6,9 +6,9 @@
 
 When you first open `index.html`, it will display a 3D visualization based on a default sample set of contribution data (from `garden.js`). If you wish to visualize your own GitHub contributions, you can load your data using the method described below. This will replace the default view with your custom data.
 
-This project visualizes your contribution data in a 3D interactive display. The contribution data is loaded dynamically from a JSON file you provide.
+This project visualizes your contribution data in a 3D interactive display. It offers multiple ways to load contribution data.
 
-### How to Load Data to Replace the Default View
+### Loading Data from a JSON File
 
 1.  **Prepare your JSON file**: Create a JSON file containing your contribution data. The format is described below.
 2.  **Select the file**: On the webpage, click the "Choose File" (or similar, depending on your browser) button next to the "Load Contribution Data" button. Select your local JSON file.
@@ -36,3 +36,13 @@ Here is an example of a valid JSON file:
 ```
 
 Make sure your JSON file is correctly formatted before attempting to load it.
+
+### Fetching Data Directly from GitHub (for Public Contributions)
+
+You can also fetch a user's public GitHub contribution data directly:
+
+1.  **Enter Username:** In the input field labeled "Enter GitHub Username" (it defaults to "paypulse"), type the GitHub username whose public contribution data you wish to visualize.
+2.  **Click Fetch:** Click the "Fetch GitHub Data" button.
+3.  The application will then attempt to retrieve the contribution data for the specified user for the last year and update the graph. A loading message will appear while the data is being fetched.
+
+**Note:** This feature uses a third-party service (`https://github-contributions-api.jogruber.de/`) to fetch contribution data. This service provides public contribution data and its availability is not guaranteed. If you encounter issues, please ensure the username is correct and the service is operational.
