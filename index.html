@@ -26,6 +26,10 @@
 <body>
     <input type="file" id="contributionFile" accept=".json">
     <button id="loadDataButton">Load Contribution Data</button>
+    <br>
+    <input type="text" id="githubUsername" placeholder="Enter GitHub Username" value="paypulse">
+    <button id="fetchGithubDataButton">Fetch GitHub Data</button>
+    <div id="loadingMessage" style="display:none; color: white; padding: 10px;">Loading GitHub data...</div>
     <div id="tooltip"></div>
     <div id="container"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -535,6 +539,80 @@
             };
 
             reader.readAsText(file);
+        });
+
+        document.getElementById('fetchGithubDataButton').addEventListener('click', () => {
+            const username = document.getElementById('githubUsername').value.trim();
+            if (!username) {
+                alert('Please enter a GitHub username.');
+                return;
+            }
+
+            const loadingMessageElement = document.getElementById('loadingMessage');
+            if (loadingMessageElement) {
+                loadingMessageElement.style.display = 'block';
+            }
+
+            const apiUrl = `https://github-contributions-api.jogruber.de/v4/${username}?y=last`; // Added ?y=last to fetch only last year data
+
+            fetch(apiUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`API request failed with status ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json(); // This returns a Promise
+                })
+                .then(data => {
+                    if (!data || !Array.isArray(data.contributions)) {
+                        console.error('Invalid data format received from API:', data);
+                        alert('Invalid data format received from API. Expected .contributions array.');
+                        return; // Stop processing
+                    }
+
+                    const transformedData = data.contributions.map(item => ({
+                        date: item.date,
+                        count: item.count
+                    }));
+
+                    currentContributions = transformedData; // Update the global variable
+                    
+                    // Clear existing cubes from the scene before regenerating
+                    if (window.contributionCubesGroup) {
+                        while (window.contributionCubesGroup.children.length > 0) {
+                            const modelGroup = window.contributionCubesGroup.children[0]; // This is a THREE.Group
+                            // Dispose of geometries and materials of meshes within this modelGroup
+                            modelGroup.children.forEach(mesh => {
+                                if (mesh.geometry) {
+                                    mesh.geometry.dispose();
+                                }
+                                if (mesh.material) {
+                                    if (Array.isArray(mesh.material)) {
+                                        mesh.material.forEach(m => m.dispose());
+                                    } else {
+                                        mesh.material.dispose();
+                                    }
+                                }
+                            });
+                            window.contributionCubesGroup.remove(modelGroup); // Remove the group itself
+                        }
+                    }
+
+                    if (typeof generateContributionGraph === 'function') {
+                        generateContributionGraph();
+                        alert('GitHub data loaded and graph updated!');
+                    } else {
+                        alert('Error: generateContributionGraph function not found, but data was processed.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching or processing GitHub data:', error);
+                    alert('Failed to fetch or process GitHub data: ' + error.message);
+                })
+                .finally(() => {
+                    if (loadingMessageElement) {
+                        loadingMessageElement.style.display = 'none';
+                    }
+                });
         });
 
         init();
