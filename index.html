@@ -32,7 +32,7 @@
     <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="garden.js"></script> <!-- Load contributions data -->
     <script>
-        window.contributions = []; // Ensure contributions is globally available
+        // window.contributions = []; // This will be handled by currentContributions
         // --- Constants ---
         const CUBE_SIZE = 1.0;
         const CUBE_SPACING = 0.3;
@@ -85,6 +85,7 @@
         let contributionCubesGroup;
         let intersectedCube = null;
         let tooltipElement;
+        let currentContributions; // Variable to hold current contribution data
 
         // --- Texture Loading ---
         const textureLoader = new THREE.TextureLoader();
@@ -238,6 +239,9 @@
             raycaster = new THREE.Raycaster();
             mouse = new THREE.Vector2();
 
+            // Initialize currentContributions with data from garden.js (if available)
+            currentContributions = typeof contributions !== 'undefined' ? [...contributions] : [];
+
             // Generate the 3D graph
             generateContributionGraph();
 
@@ -250,12 +254,12 @@
         }
 
         function generateContributionGraph() {
-            if (typeof contributions === 'undefined' || contributions.length === 0) {
+            if (typeof currentContributions === 'undefined' || currentContributions.length === 0) {
                 console.error("Contributions data is not loaded or is empty.");
                 return;
             }
 
-            const sortedContributions = [...contributions].map(c => ({...c, dateObj: new Date(c.date)})).sort((a, b) => a.dateObj - b.dateObj);
+            const sortedContributions = [...currentContributions].map(c => ({...c, dateObj: new Date(c.date)})).sort((a, b) => a.dateObj - b.dateObj);
             if (sortedContributions.length === 0) return;
 
             const firstDate = sortedContributions[0].dateObj;
@@ -485,7 +489,7 @@
                         return;
                     }
 
-                    window.contributions = parsedData; // Assign new data
+                    currentContributions = parsedData; // Assign new data
 
                     // Clear existing cubes from the scene
                     if (window.contributionCubesGroup) {
