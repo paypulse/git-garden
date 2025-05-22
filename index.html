@@ -24,12 +24,15 @@
     </style>
 </head>
 <body>
+    <input type="file" id="contributionFile" accept=".json">
+    <button id="loadDataButton">Load Contribution Data</button>
     <div id="tooltip"></div>
     <div id="container"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="garden.js"></script> <!-- Load contributions data -->
     <script>
+        window.contributions = []; // Ensure contributions is globally available
         // --- Constants ---
         const CUBE_SIZE = 1.0;
         const CUBE_SPACING = 0.3;
@@ -456,6 +459,80 @@
         }
 
         // --- Start ---
+        document.getElementById('loadDataButton').addEventListener('click', () => {
+            const fileInput = document.getElementById('contributionFile');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Please select a JSON file first.');
+                return;
+            }
+
+            if (file.type !== "application/json") {
+                alert('Please select a valid JSON file (.json).');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const fileContent = event.target.result;
+                    const parsedData = JSON.parse(fileContent);
+
+                    // Basic validation
+                    if (!Array.isArray(parsedData) || !parsedData.every(item => typeof item === 'object' && item !== null && 'date' in item && typeof item.date === 'string' && 'count' in item && typeof item.count === 'number')) {
+                        alert('Invalid JSON structure. Expected an array of objects with "date" (string) and "count" (number) properties.');
+                        return;
+                    }
+
+                    window.contributions = parsedData; // Assign new data
+
+                    // Clear existing cubes from the scene
+                    if (window.contributionCubesGroup) {
+                        while (window.contributionCubesGroup.children.length > 0) {
+                            const modelGroup = window.contributionCubesGroup.children[0]; // This is a THREE.Group
+
+                            // Dispose of geometries and materials of meshes within this modelGroup
+                            modelGroup.children.forEach(mesh => {
+                                if (mesh.geometry) {
+                                    mesh.geometry.dispose();
+                                }
+                                if (mesh.material) {
+                                    // Check if material is an array (e.g. multi-material)
+                                    if (Array.isArray(mesh.material)) {
+                                        mesh.material.forEach(m => m.dispose());
+                                    } else {
+                                        mesh.material.dispose();
+                                    }
+                                }
+                            });
+                            // Now that resources of children are disposed, remove the group itself
+                            window.contributionCubesGroup.remove(modelGroup);
+                        }
+                    } else {
+                        console.warn("contributionCubesGroup not found for clearing.");
+                    }
+                    
+                    if (typeof generateContributionGraph === 'function') {
+                        generateContributionGraph(); // Regenerate the graph
+                        alert('Contribution data loaded and graph updated!');
+                    } else {
+                        alert('Error: generateContributionGraph function not found.');
+                    }
+
+                } catch (error) {
+                    console.error('Error reading or parsing file:', error);
+                    alert('Error loading or parsing the file: ' + error.message);
+                }
+            };
+
+            reader.onerror = function() {
+                alert('Error reading the file.');
+            };
+
+            reader.readAsText(file);
+        });
+
         init();
     </script>
 </body>
